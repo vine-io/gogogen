@@ -72,7 +72,7 @@ func New() *Generator {
 		MetadataPackages: strings.Join([]string{
 		}, ","),
 		Packages:           "",
-		DropEmbeddedFields: "github.com/lack-io/gogogen/internal/meta/v1.TypeMeta",
+		DropEmbeddedFields: "github.com/lack-io/gogogen/internal/meta.Meta",
 	}
 }
 
@@ -90,7 +90,7 @@ func (g *Generator) BindFlags(app *ccli.App) {
 	app.StringVar(&g.VendorOutputBase, "vendor-output-base", g.VendorOutputBase,
 		"The vendor/ directory to look for packages in; defaults to $PWD/vendor/.", "")
 	app.StringSliceVar(&g.ProtoImport, "proto-import", g.ProtoImport,
-		"The search path for the core protobuf .protos, required; defaults $GOPATH/src/github.com/lack-io/gogogen/vendor/github.com/gogo/protobuf/gogoproto.", "")
+		"The search path for the core protobuf .protos, required;", "")
 	app.StringVar(&g.Conditional, "conditional", g.Conditional,
 		"An optional Golang build tag condition to add to the generated Go code", "")
 	app.BoolVar(&g.Clean, "clean", g.Clean,
