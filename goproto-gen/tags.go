@@ -20,10 +20,19 @@ import (
 )
 
 // extractBoolTagOrDie gets the comment-tags for the key and asserts that, if
-// it exists, the value is boolean.  If the tag did not exist, it returns
-// false.
+// it exists, the value is boolean.  If the tag did not exist, it returns false.
 func extractBoolTagOrDie(key string, lines []string) bool {
 	val, err := types.ExtractSingleBoolCommentTag("+", key, false, lines)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return val
+}
+
+// extractFieldBoolTagOrDie gets the comment-tags for the key and asserts that, if
+// it exists, the value is boolean.  If the tag did not exist, it returns true.
+func extractFieldBoolTagOrDie(key string, lines []string) bool {
+	val, err := types.ExtractSingleBoolCommentTag("+", key, true, lines)
 	if err != nil {
 		log.Fatal(err)
 	}

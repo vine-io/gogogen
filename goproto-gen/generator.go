@@ -375,6 +375,9 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 	}
 
 	for i, field := range fields {
+		if !extractFieldBoolTagOrDie(tagEnable, field.CommentLines) {
+			continue
+		}
 		genComment(out, field.CommentLines, "  ")
 		fmt.Fprintf(out, "  ")
 		switch {
