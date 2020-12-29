@@ -106,6 +106,10 @@ func (p *protobufPackage) ProtoTypeName() types.Name {
 }
 
 func (p *protobufPackage) filterFunc(c *generator.Context, t *types.Type) bool {
+	// +gogo:genproto=false
+	if extractBoolTagOrDie(tagEnable, t.CommentLines) {
+		return true
+	}
 	switch t.Kind {
 	case types.Func, types.Chan:
 		return false
@@ -113,7 +117,7 @@ func (p *protobufPackage) filterFunc(c *generator.Context, t *types.Type) bool {
 		if t.Name.Name == "struct{}" {
 			return false
 		}
-		// +vine:genproto
+		// +gogo:genproto
 		if !extractBoolTagOrDie(tagEnable, t.CommentLines) {
 			return false
 		}

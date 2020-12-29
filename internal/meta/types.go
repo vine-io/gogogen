@@ -14,11 +14,13 @@
 
 package meta
 
+// +gogo:genproto=true
 type Meta struct {
 	// 资源的唯一ID
-	UID string `json:"uid" protobuf:"bytes,1,opt,name=uid"`
+	UID string `json:"uid"`
 	// 资源创建的时间戳
-	CreationTimestamp int64 `json:"creationTimestamp" protobuf:"varint,2,opt,name=creationTimestamp"`
+	CreationTimestamp int64 `json:"creationTimestamp"`
 	// 资源更新的时间戳
-	DeletionTimestamp int64 `json:"deletionTimestamp" protobuf:"varint,3,opt,name=deletionTimestamp"`
+	// +gogo:genproto=false
+	DeletionTimestamp int64 `json:"deletionTimestamp"`
 }
