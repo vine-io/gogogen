@@ -384,27 +384,25 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 		case field.Map:
 		case field.Repeated:
 			fmt.Fprintf(out, "repeated ")
-		case field.Required:
-			fmt.Fprintf(out, "required ")
 		default:
-			fmt.Fprintf(out, "optional ")
+			// TODO: to nothing
 		}
 		sw.Do(`$.Type|local$ $.Name$ = $.Tag$`, field)
-		if len(field.Extras) > 0 {
-			extras := []string{}
-			for k, v := range field.Extras {
-				if b.omitGogo && strings.HasPrefix(k, "(gogoproto.") {
-					continue
-				}
-				extras = append(extras, fmt.Sprintf("%s = %s", k, v))
-			}
-			sort.Strings(extras)
-			if len(extras) > 0 {
-				fmt.Fprintf(out, " [")
-				fmt.Fprint(out, strings.Join(extras, ", "))
-				fmt.Fprintf(out, "]")
-			}
-		}
+		//if len(field.Extras) > 0 {
+		//	extras := []string{}
+		//	for k, v := range field.Extras {
+		//		if b.omitGogo && strings.HasPrefix(k, "(gogoproto.") {
+		//			continue
+		//		}
+		//		extras = append(extras, fmt.Sprintf("%s = %s", k, v))
+		//	}
+		//	sort.Strings(extras)
+		//	if len(extras) > 0 {
+		//		fmt.Fprintf(out, " [")
+		//		fmt.Fprint(out, strings.Join(extras, ", "))
+		//		fmt.Fprintf(out, "]")
+		//	}
+		//}
 		fmt.Fprintf(out, ";\n")
 		if i != len(fields)-1 {
 			fmt.Fprintf(out, "\n")
@@ -422,8 +420,8 @@ type protoField struct {
 	Type     *types.Type
 	Map      bool
 	Repeated bool
-	Optional bool
-	Required bool
+	//Optional bool
+	//Required bool
 	Nullable bool
 	Extras   map[string]string
 
@@ -739,7 +737,7 @@ func formatProtoFile(source []byte) ([]byte, error) {
 func assembleProtoFile(w io.Writer, f *generator.File) {
 	w.Write(f.Header)
 
-	fmt.Fprint(w, "syntax = 'proto2';\n\n")
+	fmt.Fprint(w, "syntax = 'proto3';\n\n")
 
 	if len(f.PackageName) > 0 {
 		fmt.Fprintf(w, "package %s;\n\n", f.PackageName)

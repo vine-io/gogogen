@@ -21,5 +21,6 @@ type Meta struct {
 	// 资源创建的时间戳
 	CreationTimestamp int64 `json:"creationTimestamp" protobuf:"varint,2,opt,name=creationTimestamp"`
 	// 资源更新的时间戳
+	// +gogoproto=false
 	DeletionTimestamp int64 `json:"deletionTimestamp" protobuf:"varint,3,opt,name=deletionTimestamp"`
 }
