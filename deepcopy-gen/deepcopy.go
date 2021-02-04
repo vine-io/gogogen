@@ -751,7 +751,7 @@ func (g *genDeepCopy) doMap(t *types.Type, sw *generator.SnippetWriter) {
 		sw.Do(fmt.Sprintf("(*out)[key] = val.DeepCopy%s()\n", t.Name.Name), nil)
 		sw.Do("}\n", nil)
 	case uet.Kind == types.Slice || uet.Kind == types.Map || uet.Kind == types.Pointer:
-		sw.Do("var outVal $.type|raw$\n", uet)
+		sw.Do("var outVal $.|raw$\n", uet)
 		sw.Do("if val == nil { (*out)[key] = nil } else {\n", nil)
 		sw.Do("in, out := &val, &outVal\n", nil)
 		g.generateFor(ut.Elem, sw)
@@ -912,7 +912,7 @@ func (g *genDeepCopy) doPointer(t *types.Type, sw *generator.SnippetWriter) {
 		sw.Do("}\n", nil)
 	case uet.Kind == types.Struct:
 		sw.Do("*out = new($.Elem|raw$)\n", ut)
-		sw.Do("(*in).DeepCopy(*out)\n", nil)
+		sw.Do("(*in).DeepCopyInto(*out)\n", nil)
 	default:
 		log.Fatalf("Hit an unsupported type %v for %v", uet, t)
 	}
