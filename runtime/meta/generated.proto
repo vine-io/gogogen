@@ -20,6 +20,7 @@ package github.com.lack_io.gogogen.runtime.meta;
 // Package-wide variables from generator "generated".
 option go_package = "meta";
 
+// +gogo:deepcopy-gen=true
 // +gogo:genproto=true
 // 资源元数据
 message Meta {

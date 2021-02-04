@@ -3,7 +3,8 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/gogo/protobuf v1.3.1
 ## explicit
 github.com/gogo/protobuf/proto
-# github.com/lack-io/cli v1.0.2
+github.com/gogo/protobuf/sortkeys
+# github.com/lack-io/cli v1.1.0
 ## explicit
 github.com/lack-io/cli
 # github.com/russross/blackfriday/v2 v2.0.1

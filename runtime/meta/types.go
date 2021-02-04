@@ -11,8 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gogo:deepcopy-gen=package
 package meta
 
+// +gogo:deepcopy-gen=true
 // +gogo:genproto=true
 // 资源元数据
 type Meta struct {

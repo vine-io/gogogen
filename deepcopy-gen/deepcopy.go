@@ -188,7 +188,7 @@ func Package(context *generator.Context, arguments *args.GeneratorArgs) generato
 			log.Infof("Package %q needs generation", i)
 			path := pkg.Path
 			// if the source path is within a /vendor/ directory (for example,
-			// github.com/lack-io/vineadm/internal/meta/v1), allow generation to
+			// github.com/lack-io/vine/internal/meta/v1), allow generation to
 			// output to the proper relative path (under vendor). Otherwise,
 			// the generator will create the file in the wrong location
 			// in the output directory.

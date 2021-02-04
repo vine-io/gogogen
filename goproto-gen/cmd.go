@@ -72,7 +72,7 @@ func New() *Generator {
 		MetadataPackages: strings.Join([]string{
 		}, ","),
 		Packages:           "",
-		DropEmbeddedFields: "github.com/lack-io/gogogen/internal/meta.Meta",
+		DropEmbeddedFields: "github.com/lack-io/gogogen/runtime/meta.Meta",
 	}
 }
 

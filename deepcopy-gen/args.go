@@ -41,6 +41,10 @@ func (ca *CustomArgs) AddFlags(app *ccli.App) {
 func Validate(genericArgs *args.GeneratorArgs) error {
 	_ = genericArgs.CustomArgs.(*CustomArgs)
 
+	if len(genericArgs.InputDirs) == 0 {
+		return fmt.Errorf("intput directories cannot be empty")
+	}
+
 	if len(genericArgs.OutputFileBaseName) == 0 {
 		return fmt.Errorf("output file base name cannot be empty")
 	}

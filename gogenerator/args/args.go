@@ -89,6 +89,7 @@ type GeneratorArgs struct {
 // WithoutDefaultFlagParsing disables implicit addition of command line flags and parsing.
 func (g *GeneratorArgs) WithoutDefaultFlagParsing() *GeneratorArgs {
 	g.defaultCommandLineFlags = false
+	g.InputDirs = []string{}
 	return g
 }
 
