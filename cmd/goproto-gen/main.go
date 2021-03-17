@@ -17,14 +17,14 @@
 package main
 
 import (
-	ccli "github.com/lack-io/cli"
+	"github.com/lack-io/cli"
 
 	goproto "github.com/lack-io/gogogen/goproto-gen"
 )
 
 func main() {
 	g := goproto.New()
-	g.BindFlags(ccli.CommandLine)
-	ccli.CommandLine.RunAndExitOnError()
+	g.BindFlags(cli.CommandLine)
+	cli.CommandLine.RunAndExitOnError()
 	goproto.Run(g)
 }
