@@ -631,7 +631,6 @@ func membersToFields(locator ProtobufLocator, t *types.Type, localPackage types.
 		tags := reflect.StructTag(m.Tags)
 		field := protoField{
 			LocalPackage: localPackage,
-
 			Tag:    -1,
 			Extras: make(map[string]string),
 		}
