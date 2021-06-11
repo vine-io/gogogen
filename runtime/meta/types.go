@@ -37,3 +37,11 @@ type Meta struct {
 	// 资源注解
 	Annotations map[string]string `json:"annotations" protobuf:"bytes,9,rep,name=annotations"`
 }
+
+// +gogo:genproto=true
+// 资源元数据
+type Resource struct {
+	Meta `json:",inline" protobuf:"bytes,1,opt,name=meta"`
+
+	Spec string `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+}

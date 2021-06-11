@@ -52,3 +52,9 @@ message Meta {
   map<string, string> annotations = 9;
 }
 
+// +gogo:genproto=true
+// 资源元数据
+message Resource {
+  optional string spec = 2;
+}
+
