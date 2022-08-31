@@ -65,12 +65,11 @@ func New() *Generator {
 		log.Fatalf("Cannot get current directory.")
 	}
 	return &Generator{
-		Common:           common,
-		OutputBase:       sourceTree,
-		VendorOutputBase: filepath.Join(cwd, "vendor"),
-		ProtoImport:      []string{defaultProtoImport},
-		MetadataPackages: strings.Join([]string{
-		}, ","),
+		Common:             common,
+		OutputBase:         sourceTree,
+		VendorOutputBase:   filepath.Join(cwd, "vendor"),
+		ProtoImport:        []string{defaultProtoImport},
+		MetadataPackages:   strings.Join([]string{}, ","),
 		Packages:           "",
 		DropEmbeddedFields: "github.com/lack-io/gogogen/runtime/meta.Meta",
 	}
@@ -260,7 +259,7 @@ func Run(g *Generator) {
 			searchArgs = append(searchArgs, "-I", s)
 		}
 	}
-	args := append(searchArgs, fmt.Sprintf("--gogofaster_out=%s", g.OutputBase))
+	args := append(searchArgs, fmt.Sprintf("--gogo_out=%s", g.OutputBase))
 
 	buf := &bytes.Buffer{}
 	if len(g.Conditional) > 0 {
