@@ -259,7 +259,7 @@ func Run(g *Generator) {
 			searchArgs = append(searchArgs, "-I", s)
 		}
 	}
-	args := append(searchArgs, fmt.Sprintf("--gogo_out=%s", g.OutputBase))
+	args := append(searchArgs, fmt.Sprintf("--gogofaster_out=%s", g.OutputBase))
 
 	buf := &bytes.Buffer{}
 	if len(g.Conditional) > 0 {
@@ -278,6 +278,7 @@ func Run(g *Generator) {
 		}
 
 		// generate the gogoprotobuf protoc
+		fmt.Println("protoc ", args, path)
 		cmd := exec.Command("protoc", append(args, path)...)
 		out, err := cmd.CombinedOutput()
 		if len(out) > 0 {
