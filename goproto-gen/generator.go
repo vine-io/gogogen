@@ -50,7 +50,7 @@ func (g *genProtoIDL) PackageVars(c *generator.Context) []string {
 		"option (gogoproto.marshaler_all) = true;",
 		"option (gogoproto.stable_marshaler_all) = true;",
 		"option (gogoproto.sizer_all) = true;",
-		"option (gogoproto.goproto_stringer_all) = false;",
+		"option (gogoproto.goproto_stringer_all) = true;",
 		"option (gogoproto.stringer_all) = true;",
 		"option (gogoproto.unmarshaler_all) = true;",
 		"option (gogoproto.goproto_unrecognized_all) = false;",
