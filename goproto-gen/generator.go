@@ -625,14 +625,17 @@ func membersToFields(locator ProtobufLocator, t *types.Type, localPackage types.
 			// skip private fields
 			continue
 		}
+		if !extractFieldBoolTagOrDie(tagEnable, m.CommentLines) {
+			continue
+		}
 		if _, ok := omitFieldTypes[types.Name{Name: m.Type.Name.Name, Package: m.Type.Name.Package}]; ok {
 			continue
 		}
 		tags := reflect.StructTag(m.Tags)
 		field := protoField{
 			LocalPackage: localPackage,
-			Tag:    -1,
-			Extras: make(map[string]string),
+			Tag:          -1,
+			Extras:       make(map[string]string),
 		}
 
 		protobufTag := tags.Get("protobuf")

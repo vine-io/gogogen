@@ -1,4 +1,4 @@
-// Copyright 2021 lack
+// Copyright 2022 lack
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +24,6 @@ option go_package = "meta";
 // +gogo:genproto=true
 // 资源元数据
 message Meta {
-  // 资源类型
-  optional string kind = 1;
-
   // 资源版本
   optional string apiVersion = 2;
 
