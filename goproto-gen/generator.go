@@ -15,6 +15,7 @@
 package goproto_gen
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"reflect"
@@ -656,6 +657,18 @@ func membersToFields(locator ProtobufLocator, t *types.Type, localPackage types.
 			if field.Tag == -1 && field.Name == "-" {
 				continue
 			}
+			i := 0
+			length := len(field.Name)
+			buf := &bytes.Buffer{}
+			for i < length {
+				c := field.Name[i]
+				if c == '.' || c == '-' {
+					c = '_'
+				}
+				i += 1
+				buf.WriteByte(c)
+			}
+			field.Name = buf.String()
 		}
 
 		if field.Type == nil {

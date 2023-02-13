@@ -160,6 +160,32 @@ func (p *protobufPackage) ExtractGeneratedType(t *ast.TypeSpec) bool {
 			if len(protobufTag) == 0 {
 				continue
 			}
+			// `json:"create_time" protobuf:"json=createTime"`
+			// => `json:"create_time" protobuf:"json=create_time"`
+			jsonTag := reflect.StructTag(tag).Get("json")
+			if len(jsonTag) != 0 {
+				chg := false
+				parts := strings.Split(protobufTag, ",")
+				protobufParts := make([]string, 0)
+				for _, item := range parts {
+					part := strings.TrimSpace(item)
+					if len(part) == 0 {
+						continue
+					}
+					if strings.HasPrefix(part, "json=") {
+						jsonName := strings.Split(jsonTag, ",")[0]
+						if strings.TrimPrefix(part, "json=") != jsonName {
+							part = "json=" + jsonName
+							chg = true
+						}
+					}
+					protobufParts = append(protobufParts, part)
+				}
+				if chg {
+					protobufTag = strings.Join(protobufParts, ",")
+					tag = changeTag(tag, map[string]string{"protobuf": protobufTag})
+				}
+			}
 			if len(f.Names) > 1 {
 				log.Warnf("WARNING: struct %s field %d %s: defined multiple names but single protobuf tag", t.Name.Name, i, f.Names[0].Name)
 				// TODO hard error?
@@ -215,3 +241,44 @@ func (p *protobufPackage) OutputPath() string {
 var (
 	_ = generator.Package(&protobufPackage{})
 )
+
+func tagHeaderTrim(tag string) (string, string) {
+	parts := strings.Split(tag, ":")
+	if len(parts) > 1 {
+		return parts[0], strings.Trim(parts[1], `"`)
+	}
+	return tag, ""
+}
+
+func changeTag(tag string, items map[string]string) string {
+
+	replace := func(tag, item string) string {
+		parts := strings.Split(tag, " ")
+		tagSlice := make([]string, 0)
+		header, _ := tagHeaderTrim(item)
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if len(part) == 0 {
+				continue
+			}
+			if strings.HasPrefix(part, header) {
+				part = item
+			}
+			tagSlice = append(tagSlice, part)
+		}
+
+		return strings.Join(tagSlice, " ")
+	}
+
+	for k, v := range items {
+		item := fmt.Sprintf(`%s:"%s"`, k, v)
+		if _, ok := reflect.StructTag(tag).Lookup(k); !ok {
+			tag += " " + item
+			continue
+		}
+
+		tag = replace(tag, item)
+	}
+
+	return tag
+}

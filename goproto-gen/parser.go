@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package goproto_gen
 
 import (
@@ -109,7 +108,8 @@ func RewriteGeneratedGogoProtobufFile(name string, extractFn ExtractFunc, option
 // as being "optional" (they may be nil on the wire). This allows protobuf to serialize a map or slice and
 // properly discriminate between empty and nil (which is not possible in protobuf).
 // TODO: move into upstream gogo-protobuf once https://github.com/gogo/protobuf/issues/181
-//   has agreement
+//
+//	has agreement
 func rewriteOptionalMethods(decl ast.Decl, isOptional OptionalFunc) {
 	switch t := decl.(type) {
 	case *ast.FuncDecl:
