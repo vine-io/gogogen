@@ -16,7 +16,7 @@
 //
 // Struct in the input directories with the below line in their comments will
 // have sets generated for them.
-// // +vine:genset
+// // +gogo:genset
 //
 // Any builtin type referenced anywhere in the input directories will have a
 // set generated for it.
@@ -26,10 +26,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lack-io/gogogen/gogenerator/args"
-	"github.com/lack-io/gogogen/set-gen"
-	utilbuild "github.com/lack-io/gogogen/util/build"
-	"github.com/lack-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/gogenerator/args"
+	set_gen "github.com/vine-io/gogogen/set-gen"
+	utilbuild "github.com/vine-io/gogogen/util/build"
+	"github.com/vine-io/gogogen/util/log"
 )
 
 func main() {
@@ -37,8 +37,8 @@ func main() {
 
 	// Override defaults.
 	arguments.GoHeaderFilePath = filepath.Join(args.DefaultSourceTree(), utilbuild.BoilerplatePath())
-	arguments.InputDirs = []string{"github.com/lack-io/gogogen/util/sets/types"}
-	arguments.OutputPackagePath = "github.com/lack-io/gogogen/util/sets"
+	arguments.InputDirs = []string{"github.com/vine-io/gogogen/util/sets/types"}
+	arguments.OutputPackagePath = "github.com/vine-io/gogogen/util/sets"
 
 	if err := arguments.Execute(
 		set_gen.NameSystems(),

@@ -15,8 +15,8 @@
 package goproto_gen
 
 import (
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 type ImportTracker struct {

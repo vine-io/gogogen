@@ -28,7 +28,7 @@ import (
 	"reflect"
 	"strings"
 
-	customreflect "github.com/lack-io/gogogen/util/third_party/forked/golang/reflect"
+	customreflect "github.com/vine-io/gogogen/util/third_party/forked/golang/reflect"
 )
 
 func rewriteFile(name string, header []byte, rewriteFn func(*token.FileSet, *ast.File) error) error {

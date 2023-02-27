@@ -15,7 +15,7 @@
 
 syntax = 'proto2';
 
-package github.com.lack_io.gogogen.runtime.meta;
+package github.com.vine_io.gogogen.runtime.meta;
 
 // Package-wide variables from generator "generated".
 option go_package = "meta";
@@ -53,8 +53,11 @@ message Meta {
 }
 
 // +gogo:genproto=true
+// +gogo:deepcopy-gen=true
 // 资源元数据
 message Resource {
   optional string spec = 2;
+
+  repeated string labels = 3;
 }
 

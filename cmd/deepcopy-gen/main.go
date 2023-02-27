@@ -26,29 +26,33 @@
 // Generation is governed by comment tags in the source. Any package may
 // request DeepCopy generation by including a comment in the file-comments of
 // one file, of the form:
-//   // +gogo:deepcopy-gen=package
+//
+//	// +gogo:deepcopy-gen=package
 //
 // DeepCopy functions can be generated for individual types, rather than the
 // entire package by specified a comment on the type define of the form:
-//   // +gogo:deepcopy-gen=true
+//
+//	// +gogo:deepcopy-gen=true
 //
 // When generating for a whole package, individual type may opt out of
 // DeepCopy generation by specified a comment on the of form:
-//   // +gogo:deepcopy-gen=false
+//
+//	// +gogo:deepcopy-gen=false
 //
 // Note that registration is a whole-package option, and is not available for
 // individual types.
 package main
 
 import (
+	"os"
 	"path/filepath"
 
-	ccli "github.com/lack-io/cli"
+	"github.com/spf13/pflag"
+	deepcopy_gen "github.com/vine-io/gogogen/deepcopy-gen"
+	"github.com/vine-io/gogogen/gogenerator/args"
+	"github.com/vine-io/gogogen/util/log"
 
-	"github.com/lack-io/gogogen/deepcopy-gen"
-	"github.com/lack-io/gogogen/gogenerator/args"
-	utilbuild "github.com/lack-io/gogogen/util/build"
-	"github.com/lack-io/gogogen/util/log"
+	utilbuild "github.com/vine-io/gogogen/util/build"
 )
 
 func main() {
@@ -58,10 +62,12 @@ func main() {
 	// TODO: move this out of deepcopy-gen
 	genericArgs.GoHeaderFilePath = filepath.Join(args.DefaultSourceTree(), utilbuild.BoilerplatePath())
 
-	app := ccli.CommandLine
-	genericArgs.AddFlags(app)
-	customArgs.AddFlags(app)
-	app.RunAndExitOnError()
+	fs := pflag.NewFlagSet("deepcopy", pflag.ExitOnError)
+	genericArgs.AddFlags(fs)
+	customArgs.AddFlags(fs)
+	if err := fs.Parse(os.Args); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 
 	if err := deepcopy_gen.Validate(genericArgs); err != nil {
 		log.Fatalf("Error: %v", err)

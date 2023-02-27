@@ -14,10 +14,10 @@
 
 // Package types just provides input types to the set generator. It also
 // contains a "go generate" block.
-// (You must first `go install github.com/lack-io/gogogen/set-gen`)
+// (You must first `go install github.com/vine-io/gogogen/set-gen`)
 package types
 
-//go:generate set-gen -i github.com/lack-io/gogogen/util/sets/types -o github.com/lack-io/vineadm/util/sets
+//go:generate set-gen -i github.com/vine-io/gogogen/util/sets/types -o github.com/vine-io/vineadm/util/sets
 
 type ReferenceSetType struct {
 	// There types all case files to be generated

@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 const (
@@ -248,7 +248,7 @@ func (ns *NameStrategy) Name(t *types.Type) string {
 		}, ns.Suffix)
 	case types.Struct:
 		names := []string{"Struct"}
-		for _,  m := range t.Members {
+		for _, m := range t.Members {
 			names = append(names, ns.removePrefixAndSuffix(ns.Name(m.Type)))
 		}
 		name = ns.Join(ns.Prefix, names, ns.Suffix)
@@ -340,7 +340,7 @@ func (r *rawNamer) Name(t *types.Type) string {
 	case types.Struct:
 		elems := []string{}
 		for _, m := range t.Members {
-			elems = append(elems, m.Name+" " + r.Name(m.Type))
+			elems = append(elems, m.Name+" "+r.Name(m.Type))
 		}
 		name = "struct{" + strings.Join(elems, "; ") + "}"
 	case types.Chan:

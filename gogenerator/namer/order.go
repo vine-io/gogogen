@@ -17,7 +17,7 @@ package namer
 import (
 	"sort"
 
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 // Orderer produces an ordering of types given a Namer.

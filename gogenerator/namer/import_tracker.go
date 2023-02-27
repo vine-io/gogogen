@@ -17,7 +17,7 @@ package namer
 import (
 	"sort"
 
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 // ImportTracker may be passed to a namer.RawNamer, to tracker the imports needed
@@ -72,9 +72,9 @@ func (tracker *DefaultImportTracker) AddType(t *types.Type) {
 	if len(t.Name.Package) == 0 {
 		return
 	}
-	path :=t.Name.Path
+	path := t.Name.Path
 	if len(path) == 0 {
-		path =  t.Name.Package
+		path = t.Name.Package
 	}
 	if _, ok := tracker.pathToName[path]; ok {
 		return

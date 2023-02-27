@@ -14,7 +14,7 @@
 
 package generator
 
-import "github.com/lack-io/gogogen/gogenerator/types"
+import "github.com/vine-io/gogogen/gogenerator/types"
 
 // DefaultPackage contains a default implementation of Package.
 type DefaultPackage struct {

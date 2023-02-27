@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package parser
 
 import (
@@ -31,8 +30,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 )
 
 // This clarifies when a pkg path has been canonicalized.

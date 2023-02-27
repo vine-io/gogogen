@@ -17,14 +17,16 @@
 package main
 
 import (
-	"github.com/lack-io/cli"
+	"os"
 
-	goproto "github.com/lack-io/gogogen/goproto-gen"
+	"github.com/spf13/pflag"
+	goproto "github.com/vine-io/gogogen/goproto-gen"
 )
 
 func main() {
 	g := goproto.New()
-	g.BindFlags(cli.CommandLine)
-	cli.CommandLine.RunAndExitOnError()
+	fs := pflag.NewFlagSet("goproto", pflag.ExitOnError)
+	g.BindFlags(fs)
+	fs.Parse(os.Args)
 	goproto.Run(g)
 }

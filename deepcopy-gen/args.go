@@ -17,9 +17,8 @@ package deepcopy_gen
 import (
 	"fmt"
 
-	ccli "github.com/lack-io/cli"
-
-	"github.com/lack-io/gogogen/gogenerator/args"
+	"github.com/spf13/pflag"
+	"github.com/vine-io/gogogen/gogenerator/args"
 )
 
 // NewDefaults returns arguments for the generator.
@@ -32,9 +31,9 @@ func NewDefaults() (*args.GeneratorArgs, *CustomArgs) {
 }
 
 // AddFlags add the generator flags to the flag set.
-func (ca *CustomArgs) AddFlags(app *ccli.App) {
-	app.StringSliceVarP(&ca.BoundingDirs, "bounding-dirs", "", ca.BoundingDirs,
-		"Comma-separated list of import path which bound the types for which deep-copies will be generated.", "")
+func (ca *CustomArgs) AddFlags(fs *pflag.FlagSet) {
+	fs.StringSliceVarP(&ca.BoundingDirs, "bounding-dirs", "", ca.BoundingDirs,
+		"Comma-separated list of import path which bound the types for which deep-copies will be generated.")
 }
 
 // Validate checks the given arguments.

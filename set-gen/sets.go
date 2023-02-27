@@ -17,14 +17,14 @@ package set_gen
 import (
 	"io"
 
-	"github.com/lack-io/gogogen/gogenerator/args"
-	"github.com/lack-io/gogogen/gogenerator/generator"
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/gogenerator/args"
+	"github.com/vine-io/gogogen/gogenerator/generator"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 )
 
-const tagEnable = "vine:genset"
+const tagEnable = "gogo:genset"
 
 // NameSystems returns the name system used by the generators in this package.
 func NameSystems() namer.NameSystems {
@@ -100,10 +100,10 @@ func Packages(_ *generator.Context, arguments *args.GeneratorArgs) generator.Pac
 				return true
 			case types.Struct:
 				// Only some structs can be keys in a map. This is triggered by the
-				// // +vine:genset
+				// // +gogo:genset
 				// or
 				//
-				// // +vine:genset=true
+				// // +gogo:genset=true
 				return extractBoolTagOrDie(tagEnable, t.CommentLines) == true
 			}
 			return false

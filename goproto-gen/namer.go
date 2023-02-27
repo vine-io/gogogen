@@ -19,9 +19,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/generator"
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/generator"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 type localNamer struct {

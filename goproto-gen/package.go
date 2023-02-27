@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/generator"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/gogenerator/generator"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 )
 
 func newProtobufPackage(packagePath, packageName string, generateAll bool, omitFieldTypes map[types.Name]struct{}) *protobufPackage {

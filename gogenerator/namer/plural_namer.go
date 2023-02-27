@@ -17,7 +17,7 @@ package namer
 import (
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 var consonants = "bacdfghjklmnpqrstvwxyz"

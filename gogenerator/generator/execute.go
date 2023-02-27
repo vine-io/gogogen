@@ -23,11 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 	"golang.org/x/tools/imports"
-
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
 )
 
 func errs2strings(errors []error) []string {

@@ -18,9 +18,9 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 )
 
 func NewImportTracker(typesToAdd ...*types.Type) namer.ImportTracker {

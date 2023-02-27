@@ -21,12 +21,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lack-io/gogogen/gogenerator/args"
-	"github.com/lack-io/gogogen/gogenerator/generator"
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	"github.com/lack-io/gogogen/util/log"
-	"github.com/lack-io/gogogen/util/sets"
+	"github.com/vine-io/gogogen/gogenerator/args"
+	"github.com/vine-io/gogogen/gogenerator/generator"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
+	"github.com/vine-io/gogogen/util/sets"
 )
 
 // CustomArgs is used tby the go2idl framework to pass args specific to this
@@ -188,7 +188,7 @@ func Package(context *generator.Context, arguments *args.GeneratorArgs) generato
 			log.Infof("Package %q needs generation", i)
 			path := pkg.Path
 			// if the source path is within a /vendor/ directory (for example,
-			// github.com/lack-io/vine/internal/meta/v1), allow generation to
+			// github.com/vine-io/vine/internal/meta/v1), allow generation to
 			// output to the proper relative path (under vendor). Otherwise,
 			// the generator will create the file in the wrong location
 			// in the output directory.
@@ -288,9 +288,12 @@ func (g *genDeepCopy) copyableAndInBounds(t *types.Type) bool {
 // if the type does not match. This allows more efficient deep copy
 // implementations to be defined by the type's author. The correct signature
 // for a type T is:
-//     func (t T) DeepCopy() T
+//
+//	func (t T) DeepCopy() T
+//
 // or:
-//     func (t *T) DeepCopy() *T
+//
+//	func (t *T) DeepCopy() *T
 func deepCopyMethod(t *types.Type) (*types.Signature, error) {
 	f, found := t.Methods["DeepCopy"]
 	if !found {
@@ -337,9 +340,12 @@ func deepCopyMethodOrDie(t *types.Type) *types.Signature {
 // in the type is wrong. DeepCopyInto allows more efficient deep copy
 // implementation to be defined by the type's author.  The correct signature
 // for a type T is:
-//     func (t T) DeepCopyInto(t *T)
+//
+//	func (t T) DeepCopyInto(t *T)
+//
 // or:
-//     func (t *T) DeepCopyInto(t *T)
+//
+//	func (t *T) DeepCopyInto(t *T)
 func deepCopyIntoMethod(t *types.Type) (*types.Signature, error) {
 	f, found := t.Methods["DeepCopyInfo"]
 	if !found {

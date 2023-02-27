@@ -25,15 +25,15 @@ import (
 	"sort"
 	"strings"
 
-	ccli "github.com/lack-io/cli"
+	"github.com/spf13/pflag"
+	"github.com/vine-io/gogogen/gogenerator/args"
+	"github.com/vine-io/gogogen/gogenerator/generator"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/parser"
+	"github.com/vine-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/util/log"
 
-	"github.com/lack-io/gogogen/gogenerator/args"
-	"github.com/lack-io/gogogen/gogenerator/generator"
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/parser"
-	"github.com/lack-io/gogogen/gogenerator/types"
-	utilbuild "github.com/lack-io/gogogen/util/build"
-	"github.com/lack-io/gogogen/util/log"
+	utilbuild "github.com/vine-io/gogogen/util/build"
 )
 
 const tagEnable = "gogo:genproto"
@@ -71,37 +71,37 @@ func New() *Generator {
 		ProtoImport:        []string{defaultProtoImport},
 		MetadataPackages:   strings.Join([]string{}, ","),
 		Packages:           "",
-		DropEmbeddedFields: "github.com/lack-io/gogogen/runtime/meta.Meta",
+		DropEmbeddedFields: "github.com/vine-io/gogogen/runtime/meta.Meta",
 	}
 }
 
-func (g *Generator) BindFlags(app *ccli.App) {
-	app.StringVarP(&g.Common.GoHeaderFilePath, "go-header-file", "H", g.Common.GoHeaderFilePath,
-		"File containing boilerplate header text. The string YEAR will be replaced with the current 4-digit year.", "")
-	app.BoolVar(&g.Common.VerifyOnly, "verify-only", g.Common.VerifyOnly,
-		"If true, only verify existing output, do not write anything.", "")
-	app.StringVarP(&g.Packages, "packages", "p", g.Packages,
-		"comma-separated list of directories to get input types from. Directories prefixed with '-' are not generated, directories prefixed with '+' only create types with explicit IDL instructions.", "")
-	app.StringVar(&g.MetadataPackages, "metadata-packages", g.MetadataPackages,
-		"comma-separated list of directories to get metadata input types from which are needed by any API. Directories prefixed with '-' are not generated, directories prefixed with '+' only create types with explicit IDL instructions.", "")
-	app.StringVarP(&g.OutputBase, "output-base", "o", g.OutputBase,
-		"Output base; defaults to $GOPATH/src/", "")
-	app.StringVar(&g.VendorOutputBase, "vendor-output-base", g.VendorOutputBase,
-		"The vendor/ directory to look for packages in; defaults to $PWD/vendor/.", "")
-	app.StringSliceVar(&g.ProtoImport, "proto-import", g.ProtoImport,
-		"The search path for the core protobuf .protos, required;", "")
-	app.StringVar(&g.Conditional, "conditional", g.Conditional,
-		"An optional Golang build tag condition to add to the generated Go code", "")
-	app.BoolVar(&g.Clean, "clean", g.Clean,
-		"If true, remove all generated files for the specified Packages.", "")
-	app.BoolVar(&g.OnlyIDL, "only-idl", g.OnlyIDL,
-		"If true, only generate the IDL for each package.", "")
-	app.BoolVar(&g.KeepGogoproto, "keep-gogoproto", g.KeepGogoproto,
-		"If true, the generated IDL will contain gogoprotobuf extensions which are normally removed", "")
-	app.BoolVar(&g.SkipGeneratedRewrite, "skip-generated-rewrite", g.SkipGeneratedRewrite,
-		"If true, skip fixing up the generated.pb.go file (debugging only).", "")
-	app.StringVar(&g.DropEmbeddedFields, "drop-embedded-fields", g.DropEmbeddedFields,
-		"Comma-delimited list of embedded Go types to omit from generated protobufs", "")
+func (g *Generator) BindFlags(fs *pflag.FlagSet) {
+	fs.StringVarP(&g.Common.GoHeaderFilePath, "go-header-file", "H", g.Common.GoHeaderFilePath,
+		"File containing boilerplate header text. The string YEAR will be replaced with the current 4-digit year.")
+	fs.BoolVar(&g.Common.VerifyOnly, "verify-only", g.Common.VerifyOnly,
+		"If true, only verify existing output, do not write anything.")
+	fs.StringVarP(&g.Packages, "packages", "p", g.Packages,
+		"comma-separated list of directories to get input types from. Directories prefixed with '-' are not generated, directories prefixed with '+' only create types with explicit IDL instructions.")
+	fs.StringVar(&g.MetadataPackages, "metadata-packages", g.MetadataPackages,
+		"comma-separated list of directories to get metadata input types from which are needed by any API. Directories prefixed with '-' are not generated, directories prefixed with '+' only create types with explicit IDL instructions.")
+	fs.StringVarP(&g.OutputBase, "output-base", "o", g.OutputBase,
+		"Output base; defaults to $GOPATH/src/")
+	fs.StringVar(&g.VendorOutputBase, "vendor-output-base", g.VendorOutputBase,
+		"The vendor/ directory to look for packages in; defaults to $PWD/vendor/.")
+	fs.StringSliceVar(&g.ProtoImport, "proto-import", g.ProtoImport,
+		"The search path for the core protobuf .protos, required;")
+	fs.StringVar(&g.Conditional, "conditional", g.Conditional,
+		"An optional Golang build tag condition to add to the generated Go code")
+	fs.BoolVar(&g.Clean, "clean", g.Clean,
+		"If true, remove all generated files for the specified Packages.")
+	fs.BoolVar(&g.OnlyIDL, "only-idl", g.OnlyIDL,
+		"If true, only generate the IDL for each package.")
+	fs.BoolVar(&g.KeepGogoproto, "keep-gogoproto", g.KeepGogoproto,
+		"If true, the generated IDL will contain gogoprotobuf extensions which are normally removed")
+	fs.BoolVar(&g.SkipGeneratedRewrite, "skip-generated-rewrite", g.SkipGeneratedRewrite,
+		"If true, skip fixing up the generated.pb.go file (debugging only).")
+	fs.StringVar(&g.DropEmbeddedFields, "drop-embedded-fields", g.DropEmbeddedFields,
+		"Comma-delimited list of embedded Go types to omit from generated protobufs")
 }
 
 func Run(g *Generator) {

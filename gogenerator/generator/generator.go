@@ -18,9 +18,9 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/lack-io/gogogen/gogenerator/namer"
-	"github.com/lack-io/gogogen/gogenerator/parser"
-	"github.com/lack-io/gogogen/gogenerator/types"
+	"github.com/vine-io/gogogen/gogenerator/namer"
+	"github.com/vine-io/gogogen/gogenerator/parser"
+	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
 // Package contains the contract for generating a package.
@@ -83,8 +83,6 @@ type Packages []Package
 // 5. Init()
 // 6. GenerateType() 	// Called N times, once per type in the context's Order.
 // 7. Imports()
-//
-//
 type Generator interface {
 	// The name of this generator. Will be included in generator comments.
 	Name() string

@@ -38,10 +38,19 @@ type Meta struct {
 	Annotations map[string]string `json:"annotations" protobuf:"bytes,9,rep,name=annotations"`
 }
 
+type JSONValue interface {
+	int | int32 | string
+}
+
+type Array[V JSONValue] []V
+
 // +gogo:genproto=true
+// +gogo:deepcopy-gen=true
 // 资源元数据
 type Resource struct {
 	Meta `json:",inline" protobuf:"bytes,1,opt,name=meta"`
 
 	Spec string `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+
+	Labels Array[string] `json:"labels" protobuf:"bytes,3,rep,name=labels"`
 }
