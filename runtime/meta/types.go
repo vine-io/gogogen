@@ -14,43 +14,79 @@
 // +gogo:deepcopy-gen=package
 package meta
 
+import (
+	"database/sql/driver"
+
+	"github.com/vine-io/gogogen/runtime/dao"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
+)
+
 // +gogo:deepcopy-gen=true
 // +gogo:genproto=true
 // 资源元数据
 type Meta struct {
 	// 资源类型
-	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	Kind string `json:"kind" gorm:"column:kind" protobuf:"bytes,1,opt,name=kind"`
 	// 资源版本
-	APIVersion string `json:"apiVersion" protobuf:"bytes,2,opt,name=apiVersion"`
+	APIVersion string `json:"apiVersion" gorm:"column:api_version" protobuf:"bytes,2,opt,name=apiVersion"`
 	// 资源名称
-	Name string `json:"name" protobuf:"bytes,3,opt,name=name"`
+	Name string `json:"name" gorm:"column:name" protobuf:"bytes,3,opt,name=name"`
 	// 资源的唯一ID
-	UID string `json:"uid" protobuf:"bytes,4,opt,name=uid"`
+	UID string `json:"uid" gorm:"column:uid" protobuf:"bytes,4,opt,name=uid"`
 	// 资源创建的时间戳
-	CreationTimestamp int64 `json:"creationTimestamp" protobuf:"varint,5,opt,name=creationTimestamp"`
+	CreationTimestamp int64 `json:"creationTimestamp" gorm:"column:creation_timestamp" protobuf:"varint,5,opt,name=creationTimestamp"`
 	// 资源更新的时间戳
-	UpdateTimestamp int64 `json:"updateTimestamp" protobuf:"varint,6,opt,name=updateTimestamp"`
+	UpdateTimestamp int64 `json:"updateTimestamp" gorm:"column:update_timestamp" protobuf:"varint,6,opt,name=updateTimestamp"`
 	// 资源删除的时间戳
-	DeletionTimestamp int64 `json:"deletionTimestamp" protobuf:"varint,7,opt,name=deletionTimestamp"`
+	DeletionTimestamp int64 `json:"deletionTimestamp" gorm:"column:deletion_timestamp" protobuf:"varint,7,opt,name=deletionTimestamp"`
 	// 资源标签
-	Tags map[string]string `json:"tags" protobuf:"bytes,8,rep,name=tags"`
+	Tags map[string]string `json:"tags" gorm:"column:tags" protobuf:"bytes,8,rep,name=tags"`
 	// 资源注解
-	Annotations map[string]string `json:"annotations" protobuf:"bytes,9,rep,name=annotations"`
+	Annotations map[string]string `json:"annotations" gorm:"column:annotations" protobuf:"bytes,9,rep,name=annotations"`
 }
 
-type JSONValue interface {
-	int | int32 | string
+// +gogo:gengorm=true
+type Sub struct {
+	Name string `json:"name" gorm:"column:name"`
+	// +primaryKey
+	Age int32 `json:"age" gorm:"column:age"`
 }
 
-type Array[V JSONValue] []V
+func (s Sub) Scan(src any) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Sub) Value() (driver.Value, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Sub) GormDBDataType(db *gorm.DB, field *schema.Field) string {
+	//TODO implement me
+	panic("implement me")
+}
 
 // +gogo:genproto=true
 // +gogo:deepcopy-gen=true
+// +gogo:gengorm=true
 // 资源元数据
 type Resource struct {
-	Meta `json:",inline" protobuf:"bytes,1,opt,name=meta"`
+	// +primaryKey
+	ID int32 `json:"id" gorm:"column:id;primaryKey"`
 
-	Spec string `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec string `json:"spec" gorm:"column:spec"`
 
-	Labels Array[string] `json:"labels" protobuf:"bytes,3,rep,name=labels"`
+	Labels dao.Array[string] `json:"labels" gorm:"column:labels;serializer:json"`
+
+	Ann dao.Map[string, string] `json:"ann" gorm:"column:ann;serializer:json"`
+
+	Subs dao.JSONArray[*Sub] `json:"subs" gorm:"column:subs;serializer:json"`
+
+	SubMap dao.JSONMap[string, *Sub] `json:"subMap" gorm:"column:subMap;serializer:json"`
+
+	Enable *bool `json:"enable" gorm:"column:enable"`
+
+	Age int32 `json:"age" gorm:"column:age"`
 }

@@ -72,15 +72,15 @@ func NewSnippetWriter(w io.Writer, c *Context, left, right string) *SnippetWrite
 // return sw.Error()
 //
 // Where:
-// * "$" starts a template directive
-// * "." references the entire thing passed as args
-// * "type" therefore sees thing on the left to the thing on the right"
-// * "|" means "pass the thing on the left to the thing on the right"
-// * "public" is the name of a naming system, so the SnippetWriter has given
-//   the template a function called "public" that takes a *type.Type and
-//   returns the naming system's name. E.g., if the type is "string" this might
-//   return "String".
-// * the second "$" ends the templates directive.
+//   - "$" starts a template directive
+//   - "." references the entire thing passed as args
+//   - "type" therefore sees thing on the left to the thing on the right"
+//   - "|" means "pass the thing on the left to the thing on the right"
+//   - "public" is the name of a naming system, so the SnippetWriter has given
+//     the template a function called "public" that takes a *type.Type and
+//     returns the naming system's name. E.g., if the type is "string" this might
+//     return "String".
+//   - the second "$" ends the templates directive.
 //
 // The map is actually not necessary. The below does the same thing:
 //
@@ -114,6 +114,18 @@ func (s *SnippetWriter) Do(format string, args interface{}) *SnippetWriter {
 	if err != nil {
 		s.err = err
 	}
+	return s
+}
+
+func (s *SnippetWriter) Doln(test string) *SnippetWriter {
+	s.Do(test, nil)
+	s.Do("\n", nil)
+	return s
+}
+
+func (s *SnippetWriter) Dof(format string, args interface{}) *SnippetWriter {
+	s.Do(format, args)
+	s.Do("\n", nil)
 	return s
 }
 

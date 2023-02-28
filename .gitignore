@@ -5,3 +5,5 @@
 *.tar
 
 *.gz
+
+gorm_generated.go

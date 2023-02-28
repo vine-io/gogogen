@@ -347,7 +347,7 @@ func deepCopyMethodOrDie(t *types.Type) *types.Signature {
 //
 //	func (t *T) DeepCopyInto(t *T)
 func deepCopyIntoMethod(t *types.Type) (*types.Signature, error) {
-	f, found := t.Methods["DeepCopyInfo"]
+	f, found := t.Methods["DeepCopyInto"]
 	if !found {
 		return nil, nil
 	}

@@ -54,10 +54,13 @@ message Meta {
 
 // +gogo:genproto=true
 // +gogo:deepcopy-gen=true
+// +gogo:gengorm=true
 // 资源元数据
 message Resource {
-  optional string spec = 2;
+  optional string spec = 1;
 
-  repeated string labels = 3;
+  repeated string labels = 2;
+
+  optional bool age = 3;
 }
 

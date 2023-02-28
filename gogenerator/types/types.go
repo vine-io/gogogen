@@ -97,6 +97,8 @@ const (
 
 	// Protobuf is protobuf type.
 	Protobuf Kind = "Protobuf"
+
+	Gorm Kind = "Gorm"
 )
 
 // Package holds package level information.
