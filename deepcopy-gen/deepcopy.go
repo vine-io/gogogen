@@ -185,7 +185,7 @@ func Package(context *generator.Context, arguments *args.GeneratorArgs) generato
 		}
 
 		if pkgNeedsGeneration {
-			log.Infof("Package %q needs generation", i)
+			log.Debug("Package %q needs generation", i)
 			path := pkg.Path
 			// if the source path is within a /vendor/ directory (for example,
 			// github.com/vine-io/vine/internal/meta/v1), allow generation to
@@ -268,7 +268,7 @@ func (g *genDeepCopy) Filter(c *generator.Context, t *types.Type) bool {
 		log.Infof("Type %v is not copyable", t)
 		return false
 	}
-	log.Infof("Type %v is copyable", t)
+	log.Debug("Type %v is copyable", t)
 	g.typesForInit = append(g.typesForInit, t)
 	return true
 }
@@ -584,7 +584,7 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 		return nil
 	}
 
-	log.Infof("Generating deepcopy function for type %v", t)
+	log.Debugf("Generating deepcopy function for type %v", t)
 
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 	args := argsFromType(t)

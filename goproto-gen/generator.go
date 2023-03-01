@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"path"
 	"reflect"
 	"sort"
 	"strconv"
@@ -44,16 +45,16 @@ type genProtoIDL struct {
 func (g *genProtoIDL) PackageVars(c *generator.Context) []string {
 	if g.omitGogo {
 		return []string{
-			fmt.Sprintf("option go_package = %q;", g.localGoPackage.Name),
+			fmt.Sprintf("option go_package = %q;", g.localGoPackage.Package),
 		}
 	}
 	return []string{
-		"option (gogoproto.marshaler_all) = true;",
+		"option (gogoproto.marshaler_all) = false;",
 		"option (gogoproto.stable_marshaler_all) = true;",
 		"option (gogoproto.sizer_all) = true;",
 		"option (gogoproto.goproto_stringer_all) = true;",
 		"option (gogoproto.stringer_all) = true;",
-		"option (gogoproto.unmarshaler_all) = true;",
+		"option (gogoproto.unmarshaler_all) = false;",
 		"option (gogoproto.goproto_unrecognized_all) = false;",
 		"option (gogoproto.goproto_enum_prefix_all) = false;",
 		"option (gogoproto.goproto_getters_all) = false;",
@@ -771,7 +772,7 @@ func assembleProtoFile(w io.Writer, f *generator.File) {
 	fmt.Fprint(w, "syntax = 'proto2';\n\n")
 
 	if len(f.PackageName) > 0 {
-		fmt.Fprintf(w, "package %s;\n\n", f.PackageName)
+		fmt.Fprintf(w, "package %s;\n\n", strings.TrimPrefix(path.Ext(f.PackageName), "."))
 	}
 
 	if len(f.Imports) > 0 {
