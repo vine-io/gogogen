@@ -442,11 +442,11 @@ func (g *genDeepCopy) isOtherPackage(pkg string) bool {
 	return true
 }
 
-func (g *genDeepCopy) Imports(c *generator.Context) (imports []string) {
-	importLines := []string{}
-	for _, singleImport := range g.imports.ImportLines() {
+func (g *genDeepCopy) Imports(c *generator.Context) (imports map[string]string) {
+	importLines := map[string]string{}
+	for k, singleImport := range g.imports.ImportLines() {
 		if g.isOtherPackage(singleImport) {
-			importLines = append(importLines, singleImport)
+			importLines[k] = singleImport
 		}
 	}
 	return importLines
@@ -786,7 +786,7 @@ func (g *genDeepCopy) doSlice(t *types.Type, sw *generator.SnippetWriter) {
 	if deepCopyMethodOrDie(ut.Elem) != nil || deepCopyIntoMethodOrDie(ut.Elem) != nil {
 		sw.Do("for i := range *in\n", nil)
 		// Note: a DeepCopyInto exists because it is added if DeepCopy is manually defined
-		sw.Do("(*in)[i].DeepCopyInfo(&(*out)[i])\n", nil)
+		sw.Do("(*in)[i].DeepCopyInto(&(*out)[i])\n", nil)
 		sw.Do("}\n", nil)
 	} else if uet.Kind == types.Builtin || uet.IsAssignable() {
 		sw.Do("copy(*out, *in)\n", nil)

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"path"
 	"reflect"
 	"sort"
 	"strings"
@@ -127,11 +128,11 @@ func isOptionalAlias(t *types.Type) bool {
 	return true
 }
 
-func (g *genGormIDL) Imports(c *generator.Context) (imports []string) {
-	lines := []string{}
+func (g *genGormIDL) Imports(c *generator.Context) (imports map[string]string) {
+	lines := map[string]string{}
 	// TODO: this could be expressed more cleanly
-	for _, line := range g.imports.ImportLines() {
-		lines = append(lines, line)
+	for k, line := range g.imports.ImportLines() {
+		lines[k] = line
 	}
 	return lines
 }
@@ -229,7 +230,6 @@ func (p gormLocator) GormTypeFor(t *types.Type) (*types.Type, error) {
 type bodyGen struct {
 	locator        GormLocator
 	localPackage   types.Name
-	omitGogo       bool
 	omitFieldTypes map[types.Name]struct{}
 
 	t *types.Type
@@ -294,13 +294,16 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 	}
 
 	out := sw.Out()
-	sw.Dof(`type XX_$.Name.Name$ struct {`, b.t)
-
 	// primary key
 	var pkField *gormField
+	embedded := false
+	sw.Dof(`type XX_$.Name.Name$ struct {`, b.t)
 	for i, field := range fields {
 		if !extractFieldBoolTagOrDie(tagEnable, field.CommentLines) {
 			continue
+		}
+		if field.embedded {
+			embedded = true
 		}
 		if field.primaryKey {
 			pkField = &fields[i]
@@ -315,19 +318,85 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 	}
 	sw.Doln("}")
 
-	if pkField == nil {
+	if pkField == nil && !embedded {
 		return fmt.Errorf("type %v missing field for primaryKey", b.t)
 	}
 
-	// generate storage struct
-	sw.Dof(`type $.Name.Name$Storage struct {`, b.t)
-	sw.Doln("*gorm.DB")
-	sw.Doln("}")
+	for _, field := range fields {
+		if field.embedded {
+			continue
+		}
+		fname := field.Name
+		ft := field.Type.Name.Name
+		if field.Type.Key != nil && field.Type.Elem != nil {
+			kt, vt := field.Type.Key.Name.Name, field.Type.Elem.Name.Name
+			if field.Type.Elem.Underlying != nil {
+				vt = "*" + vt
+			}
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in map[%s]%s) *$.Name.Name$ {`, fname, kt, vt), b.t)
+			sw.Dof("m.$.Name$ = in", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Doln("")
+
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Put%s(k %s, v %s) *$.Name.Name$ {`, fname, kt, vt), b.t)
+			sw.Dof(`if m.$.Name$ == nil {`, field)
+			sw.Dof(fmt.Sprintf(`m.$.Name$ = make(map[%s]%s)`, kt, vt), field)
+			sw.Doln("}")
+			sw.Dof("m.$.Name$[k] = v", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Doln("")
+
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Remove%s(k %s) *$.Name.Name$ {`, fname, kt), b.t)
+			sw.Dof(`if m.$.Name$ == nil {`, field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Dof("delete(m.$.Name$, k)", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+		} else if field.Type.Elem != nil {
+			if field.Type.Elem.Kind == "Builtin" {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []%s) *$.Name.Name$ {`, fname, ft), b.t)
+			} else {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []*%s) *$.Name.Name$ {`, fname, ft), b.t)
+			}
+			sw.Dof("m.$.Name$ = in", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+		} else {
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in %s) *$.Name.Name$ {`, fname, ft), b.t)
+			if field.Type.Underlying != nil {
+				sw.Dof("m.$.Name$ = &in", field)
+			} else {
+				sw.Dof("m.$.Name$ = in", field)
+			}
+			sw.Doln("return m")
+			sw.Doln("}")
+		}
+		sw.Doln("")
+	}
+
+	// generate functions for implements dao.JSONValue
+	sw.Dof(`// Value return json value, implement driver.Valuer interface
+func (m *$.Name.Name$) Value() (driver.Value, error) {
+	return dao.GetValue(m)
+}
+
+// Scan scan value into Jsonb, implements sql.Scanner interface
+func (m *$.Name.Name$) Scan(value any) error {
+	return dao.ScanValue(value, m)
+}
+
+// GormDBDataType implements migrator.GormDBDataTypeInterface interface
+func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
+	return dao.GetGormDBDataType(db, field)
+}`, b.t)
 	sw.Doln("")
 
-	// generate New function for storage
-	sw.Dof(`func New$.Name.Name$Storage(db *gorm.DB) *$.Name.Name$Storage {`, b.t)
-	sw.Dof(`return &$.Name.Name$Storage{DB: db}`, b.t)
+	// generate functions for source struct
+	sw.Dof(`func (m *$.Name.Name$) TableName() string {`, b.t)
+	sw.Dof(`return "$.|plural$"`, b.t)
 	sw.Doln("}")
 	sw.Doln("")
 
@@ -336,21 +405,117 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 			return "uid", m.Uid, m.Uid == ""
 		}
 	*/
+
 	// generate primary key
-	sw.Dof(`func (s *$.Name.Name$Storage) PrimaryKey(m $.Name.Name$) (string, any, bool) {`, b.t)
-	switch pkField.Type.Name.Name {
-	case "string":
-		sw.Dof(`return "$.GormName$", m.$.Name$, m.$.Name$ == ""`, pkField)
-	case "int", "int8", "int16", "int32", "int64",
-		"uint", "uint8", "uint16", "uint32", "uint64":
-		sw.Dof(`return "$.GormName$", m.$.Name$, m.$.Name$ == 0`, pkField)
-	default:
-		return fmt.Errorf("type %v invalid type for primaryKey", b.t)
+	if !embedded {
+		sw.Dof(`func (m *$.Name.Name$) PrimaryKey() (string, any, bool) {`, b.t)
+		switch pkField.Type.Name.Name {
+		case "string":
+			sw.Dof(`return "$.GormName$", m.$.Name$, m.$.Name$ == ""`, pkField)
+		case "int", "int8", "int16", "int32", "int64",
+			"uint", "uint8", "uint16", "uint32", "uint64":
+			sw.Dof(`return "$.GormName$", m.$.Name$, m.$.Name$ == 0`, pkField)
+		default:
+			return fmt.Errorf("type %s invalid type for primaryKey", b.t.Name.Name)
+		}
+		sw.Doln("}")
+		sw.Doln("")
 	}
+
+	// generate storage struct
+	sw.Dof(`type $.Name.Name$Storage struct {`, b.t)
+	sw.Doln("*gorm.DB")
+	sw.Doln("exprs []clause.Expression")
+	sw.Doln("}")
+	sw.Doln("")
+
+	// generate New function for storage
+	sw.Dof(`func New$.Name.Name$Storage(db *gorm.DB) *$.Name.Name$Storage {`, b.t)
+	sw.Doln(`exprs := make([]clause.Expression, 0)`)
+	sw.Dof(`return &$.Name.Name$Storage{DB: db, exprs: exprs}`, b.t)
 	sw.Doln("}")
 	sw.Doln("")
 
 	// generate CURD codes
+	sw.Dof(`func (s *$.Name.Name$Storage) Count(ctx context.Context, m $.Name.Name$) (total int64, err error) {`, b.t)
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
+	sw.Doln(`err = tx.Clauses(clauses...).Count(&total).Error`)
+	sw.Doln("return")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindPage(ctx context.Context, m $.Name.Name$, page, size int32) ([]*$.Name.Name$, int64, error) {`, b.t)
+	sw.Doln("")
+	sw.Doln("total, err := s.Count(ctx, m)")
+	sw.Doln("if err != nil {")
+	sw.Doln("return nil, 0, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("pk, _, _ := m.PrimaryKey()")
+	sw.Doln("limit := int(size)")
+	sw.Doln("s.exprs = append(s.exprs,")
+	sw.Doln("clause.OrderBy{Columns: []clause.OrderByColumn{{Column: clause.Column{Table: m.TableName(), Name: pk}, Desc: true}}},")
+	sw.Doln("clause.Limit{Offset: int((page - 1) * size), Limit: &limit},")
+	sw.Doln(")")
+	sw.Doln("")
+	sw.Doln("data, err := s.XXFindAll(ctx, m)")
+	sw.Doln(`if err != nil {`)
+	sw.Doln("return nil, 0, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return data, total, nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindAll(ctx context.Context, m $.Name.Name$) ([]*$.Name.Name$, error) {`, b.t)
+	sw.Dof("dest := make([]*$.Name.Name$, 0)", b.t)
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
+	sw.Doln(`if err := tx.Clauses(clauses...).Find(&dest).Error; err != nil {`)
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return dest, nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindById(ctx context.Context, id any) (*$.Name.Name$, error) {`, b.t)
+	sw.Dof("m := $.Name.Name${}", b.t)
+	sw.Doln("pk, _, _ := m.PrimaryKey()")
+	sw.Doln("")
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln(`if err := tx.Where(pk+" = ?", id).First(&m).Error; err != nil {`)
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return &m, nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindOne(ctx context.Context, m $.Name.Name$) (*$.Name.Name$, error) {`, b.t)
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
+	sw.Doln(`if err := tx.Clauses(clauses...).First(&m).Error; err != nil {`)
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return &m, nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) Cond(exprs ...clause.Expression) *$.Name.Name$Storage {`, b.t)
+	sw.Doln("s.exprs = append(s.exprs, exprs...)")
+	sw.Doln("return s")
+	sw.Doln("}")
+	sw.Doln("")
+
 	/*
 		func (s *ProductStorage) extractClauses(ctx context.Context, m *Product) []clause.Expression {
 
@@ -368,24 +533,27 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 			return exprs
 		}
 	*/
-	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses(ctx context.Context, m *$.Name.Name$) []clause.Expression {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses(m *$.Name.Name$) []clause.Expression {`, b.t)
 	sw.Doln("")
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
 	for _, field := range fields {
+		if field.embedded {
+			continue
+		}
 		if field.Type.Key != nil && field.Type.Elem != nil {
 			sw.Dof(`if m.$.Name$ != nil {`, field)
 			sw.Dof(`for k, v := range m.$.Name$ {`, field)
-			sw.Dof(`exprs = append(exprs, datatypes.JSONQuery("$.GormName$").Equals(v, k))`, field)
+			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, k))`, field)
 			sw.Doln("}")
 			sw.Doln("}")
 		} else if field.Type.Elem != nil {
 			sw.Dof(`if m.$.Name$ != nil {`, field)
 			sw.Dof(`for _, item := range m.$.Name$ {`, field)
 			if field.Type.Elem.Kind == "Builtin" {
-				sw.Dof(`exprs = append(exprs, datatypes.JSONQuery("$.GormName$").HasKey(item))`, field)
+				sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").HasKey(item))`, field)
 			} else {
 				sw.Dof(`for k, v := range dao.FieldPatch(item) {`, field)
-				sw.Dof(`exprs = append(exprs, datatypes.JSONQuery("$.GormName$").Equals(v, strings.Split(k, ".")...))`, field)
+				sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, strings.Split(k, ".")...))`, field)
 				sw.Doln("}")
 			}
 			sw.Doln("}")
@@ -428,6 +596,126 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 	sw.Doln("}")
 	sw.Doln("")
 
+	sw.Dof(`func (s *$.Name.Name$Storage) XXCreate(ctx context.Context, m *$.Name.Name$) error {`, b.t)
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln(`if err := tx.Create(&m).Error; err != nil {`)
+	sw.Doln("return err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXUpdates(ctx context.Context, m *$.Name.Name$) error {`, b.t)
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln(`if err := tx.Updates(&m).Error; err != nil {`)
+	sw.Doln("return err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	/*
+		func (s *SubStorage) XXPatchMerge(ctx context.Context, id any, patches ...dao.Patcher) (*Sub, error) {
+			m, err := s.XXFindById(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(patches) == 0 {
+				return m, nil
+			}
+
+			pb, _ := json.Marshal(patches)
+			patch, err := jsonpatch.DecodePatch(pb)
+			if err != nil {
+				return nil, err
+			}
+
+			b, _ := json.Marshal(m)
+			applied, err := patch.Apply(b)
+			if err != nil {
+				return nil, err
+			}
+
+			err = json.Unmarshal(applied, &m)
+			if err != nil {
+				return nil, err
+			}
+
+			return m, nil
+		}
+	*/
+	sw.Dof(`func (s *$.Name.Name$Storage) XXPatchMerge(ctx context.Context, id any, patches ...dao.Patcher) (*$.Name.Name$, error) {`, b.t)
+	sw.Doln("m, err := s.XXFindById(ctx, id)")
+	sw.Doln("if err != nil {")
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("if len(patches) == 0 {")
+	sw.Doln("return m, nil")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("pb, _ := json.Marshal(patches)")
+	sw.Doln("patch, err := jsonpatch.DecodePatch(pb)")
+	sw.Doln("if err != nil {")
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("b, _ := json.Marshal(m)")
+	sw.Doln("applied, err := patch.Apply(b)")
+	sw.Doln("if err != nil {")
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("if err = json.Unmarshal(applied, &m); err != nil {")
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("if err = s.XXUpdates(ctx, m); err != nil {")
+	sw.Doln("return nil, err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return m, nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXBatchDelete(ctx context.Context, m *$.Name.Name$) error {`, b.t)
+	sw.Doln("")
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln("clauses := append(s.exprs, s.extractClauses(m)...)")
+	sw.Dof(`if err := tx.Clauses(clauses...).Delete(&$.Name.Name${}).Error; err != nil {`, b.t)
+	sw.Doln("return err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return nil")
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXDelete(ctx context.Context, m *$.Name.Name$) error {`, b.t)
+	sw.Doln("pk, pkv, isNil := m.PrimaryKey()")
+	sw.Doln("if isNil {")
+	sw.Doln(`return errors.New("missing primary key")`)
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Dof(`if err := tx.Where(pk+" = ?", pkv).Delete(&$.Name.Name${}).Error; err != nil {`, b.t)
+	sw.Doln("return err")
+	sw.Doln("}")
+	sw.Doln("")
+	sw.Doln("return nil")
+	sw.Doln("}")
+	sw.Doln("")
+
 	return nil
 }
 
@@ -440,6 +728,7 @@ type gormField struct {
 	Serializer    string
 	Size          int
 	primaryKey    bool
+	embedded      bool
 	Unique        bool
 	Default       string
 	Precision     bool
@@ -454,6 +743,9 @@ type gormField struct {
 }
 
 func (f gormField) toTagString() string {
+	if f.embedded {
+		return `gorm:"embedded"`
+	}
 	items := []string{}
 	items = append(items, "column:"+f.GormName)
 	if f.Serializer != "" {
@@ -621,21 +913,24 @@ func membersToFields(locator GormLocator, t *types.Type, localPackage types.Name
 		if _, ok := omitFieldTypes[types.Name{Name: m.Type.Name.Name, Package: m.Type.Name.Package}]; ok {
 			continue
 		}
+
 		tags := reflect.StructTag(m.Tags)
 		field := gormField{
 			LocalPackage: localPackage,
-			//Tag:          -1,
-			Extras: make(map[string]string),
+			Extras:       make(map[string]string),
+		}
+
+		gormTag := tags.Get("gorm")
+		if gormTag == "-" {
+			continue
 		}
 
 		markers := types.ExtractCommentTags("+", m.CommentLines)
 		if v := markers[tagPrimaryKey]; v != nil {
 			field.primaryKey = true
 		}
-
-		gormTag := tags.Get("gorm")
-		if gormTag == "-" {
-			continue
+		if v := markers[tagEmbedded]; v != nil {
+			field.embedded = true
 		}
 
 		if err := gormTagToField(gormTag, &field, m, t, localPackage); err != nil {
@@ -645,17 +940,17 @@ func membersToFields(locator GormLocator, t *types.Type, localPackage types.Name
 		// extract information from JSON field tag
 		if tag := tags.Get("json"); len(tag) > 0 {
 			parts := strings.Split(tag, ",")
-			if len(field.Name) == 0 && len(parts[0]) != 0 {
-				field.Name = parts[0]
+			if len(field.GormName) == 0 && len(parts[0]) != 0 {
+				field.GormName = parts[0]
 			}
-			if field.Name == "-" {
+			if field.GormName == "-" {
 				continue
 			}
 			i := 0
-			length := len(field.Name)
+			length := len(field.GormName)
 			buf := &bytes.Buffer{}
 			for i < length {
-				c := field.Name[i]
+				c := field.GormName[i]
 				if c == '.' || c == '-' {
 					c = '_'
 				}
@@ -710,8 +1005,6 @@ func assembleGormFile(w io.Writer, f *generator.File) {
 		fmt.Fprintf(w, "%s\n", f.Vars.String())
 	}
 
-	//f.Imports["gorm.io/gorm"] = struct{}{}
-
 	if len(f.Imports) > 0 {
 		imports := []string{}
 		for i := range f.Imports {
@@ -719,12 +1012,18 @@ func assembleGormFile(w io.Writer, f *generator.File) {
 		}
 		sort.Strings(imports)
 		fmt.Fprintf(w, "import (\n")
-		for _, s := range imports {
-			fmt.Fprintf(w, `"%s"`, s)
+		for _, pathname := range imports {
+			name := f.Imports[pathname]
+			if name != "" && path.Base(pathname) != name {
+				fmt.Fprintf(w, `%s "%s"`, name, pathname)
+			} else {
+				fmt.Fprintf(w, `"%s"`, pathname)
+			}
 			fmt.Fprint(w, "\n")
 		}
 		fmt.Fprintf(w, ")\n")
 	}
+	fmt.Fprintf(w, "\n")
 
 	w.Write(f.Body.Bytes())
 }

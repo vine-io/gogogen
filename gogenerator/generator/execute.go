@@ -236,7 +236,7 @@ func (c *Context) ExecutePackage(outDir string, p Package) error {
 				PackagePath:       p.Path(),
 				PackageSourcePath: p.SourcePath(),
 				Header:            p.Header(g.Filename()),
-				Imports:           map[string]struct{}{},
+				Imports:           map[string]string{},
 			}
 			files[f.Name] = f
 		} else {
@@ -264,9 +264,9 @@ func (c *Context) ExecutePackage(outDir string, p Package) error {
 		if err := genContext.executeBody(&f.Body, g); err != nil {
 			return err
 		}
-		if imports := g.Imports(genContext); len(imports) > 0 {
-			for _, i := range imports {
-				f.Imports[i] = struct{}{}
+		if importLines := g.Imports(genContext); len(importLines) > 0 {
+			for k, v := range importLines {
+				f.Imports[k] = v
 			}
 		}
 	}

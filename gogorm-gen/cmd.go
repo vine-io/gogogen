@@ -38,6 +38,8 @@ import (
 const (
 	tagEnable     = "gogo:gengorm"
 	tagPrimaryKey = "primaryKey"
+	tagEmbedded   = "embedded"
+	tagUnique     = "unique"
 )
 
 type Generator struct {
@@ -192,6 +194,7 @@ func Run(g *Generator) {
 		b,
 		namer.NameSystems{
 			"public": namer.NewPublicNamer(3),
+			"plural": namer.NewAllLowercasePluralNamer(map[string]string{}),
 			"gorm":   gormNames,
 		},
 		"public",

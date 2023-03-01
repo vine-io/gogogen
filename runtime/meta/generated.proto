@@ -22,19 +22,21 @@ option go_package = "meta";
 
 // +gogo:deepcopy-gen=true
 // +gogo:genproto=true
+// +gogo:gengorm=true
 // 资源元数据
 message Meta {
   // 资源类型
   optional string kind = 1;
 
   // 资源版本
-  optional string apiVersion = 2;
+  optional string apiVersion = 10;
 
   // 资源名称
   optional string name = 3;
 
   // 资源的唯一ID
-  optional string uid = 4;
+  // +primaryKey
+  optional string uid = 11;
 
   // 资源创建的时间戳
   optional int64 creationTimestamp = 5;
@@ -57,10 +59,32 @@ message Meta {
 // +gogo:gengorm=true
 // 资源元数据
 message Resource {
-  optional string spec = 1;
+  // +embedded
+  // +protobuf.embed
+  required Meta meta = 1;
 
-  repeated string labels = 2;
+  optional string spec = 2;
 
-  optional bool age = 3;
+  repeated string labels = 3;
+
+  map<string, string> ann = 4;
+
+  repeated Sub subs = 5;
+
+  map<string, Sub> subMap = 6;
+
+  optional bool enable = 7;
+
+  optional int32 age = 8;
+}
+
+// +gogo:deepcopy-gen=true
+// +gogo:genproto=true
+// +gogo:gengorm=true
+message Sub {
+  optional string name = 1;
+
+  // +primaryKey
+  optional int32 age = 2;
 }
 

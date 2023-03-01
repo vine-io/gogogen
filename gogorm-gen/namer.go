@@ -35,7 +35,8 @@ func (n localNamer) Name(t *types.Type) string {
 	if len(n.localPackage.Package) != 0 && n.localPackage.Package == t.Name.Package {
 		return t.Name.Name
 	}
-	return t.Name.String()
+	name := t.Name.String()
+	return name
 }
 
 type gormNamer struct {

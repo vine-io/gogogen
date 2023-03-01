@@ -15,8 +15,6 @@
 package namer
 
 import (
-	"sort"
-
 	"github.com/vine-io/gogogen/gogenerator/types"
 )
 
@@ -84,15 +82,10 @@ func (tracker *DefaultImportTracker) AddType(t *types.Type) {
 	tracker.pathToName[path] = name
 }
 
-func (tracker *DefaultImportTracker) ImportLines() []string {
-	importPaths := []string{}
-	for path := range tracker.pathToName {
-		importPaths = append(importPaths, path)
-	}
-	sort.Sort(sort.StringSlice(importPaths))
-	out := []string{}
-	for _, path := range importPaths {
-		out = append(out, tracker.PrintImport(path, tracker.pathToName[path]))
+func (tracker *DefaultImportTracker) ImportLines() map[string]string {
+	out := map[string]string{}
+	for path, name := range tracker.pathToName {
+		out[path] = name
 	}
 	return out
 }

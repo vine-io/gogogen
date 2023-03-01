@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2023 Lack
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package dao
 
 import (
@@ -6,8 +28,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -27,6 +52,80 @@ type Builtin interface {
 
 type Array[V Builtin] []V
 
+func (m *Array[V]) PushBack(value V) {
+	*m = append(*m, value)
+}
+
+func (m *Array[V]) PopBack() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	v = (*m)[n-1]
+	*m = (*m)[:n-1]
+	return
+}
+
+func (m *Array[V]) PushFront(value V) {
+	*m = append([]V{value}, *m...)
+}
+
+func (m *Array[V]) PopFront() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	v = (*m)[0]
+	*m = (*m)[1:]
+	return
+}
+
+func (m *Array[V]) Front() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	return (*m)[0], true
+}
+
+func (m *Array[V]) Back() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	return (*m)[n-1], true
+}
+
+func (m *Array[V]) Get(idx int) (v V, ok bool) {
+	if idx < 0 || idx >= len(*m) {
+		return v, false
+	}
+
+	return (*m)[idx], true
+}
+
+func (m *Array[V]) Remove(idx int) (v V, ok bool) {
+	if idx < 0 || idx >= len(*m) {
+		return v, false
+	}
+
+	if idx == 0 {
+		return m.PopFront()
+	}
+	if idx == len(*m)-1 {
+		return m.PopBack()
+	}
+
+	v = (*m)[idx]
+	*m = append((*m)[0:idx], (*m)[idx+1:]...)
+
+	return v, true
+}
+
 // Value return json value, implement driver.Valuer interface
 func (m *Array[V]) Value() (driver.Value, error) {
 	return GetValue(m)
@@ -37,11 +136,86 @@ func (m *Array[V]) Scan(value any) error {
 	return ScanValue(value, m)
 }
 
+// GormDBDataType implements migrator.GormDBDataTypeInterface interface
 func (m *Array[V]) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	return GetGormDBDataType(db, field)
 }
 
 type JSONArray[V JSONValue] []V
+
+func (m *JSONArray[V]) PushBack(value V) {
+	*m = append(*m, value)
+}
+
+func (m *JSONArray[V]) PopBack() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	v = (*m)[n-1]
+	*m = (*m)[:n-1]
+	return
+}
+
+func (m *JSONArray[V]) PushFront(value V) {
+	*m = append([]V{value}, *m...)
+}
+
+func (m *JSONArray[V]) PopFront() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	v = (*m)[0]
+	*m = (*m)[1:]
+	return
+}
+
+func (m *JSONArray[V]) Front() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	return (*m)[0], true
+}
+
+func (m *JSONArray[V]) Back() (v V, ok bool) {
+	n := len(*m)
+	if n == 0 {
+		return v, false
+	}
+
+	return (*m)[n-1], true
+}
+
+func (m *JSONArray[V]) Get(idx int) (v V, ok bool) {
+	if idx < 0 || idx >= len(*m) {
+		return v, false
+	}
+
+	return (*m)[idx], true
+}
+
+func (m *JSONArray[V]) Remove(idx int) (v V, ok bool) {
+	if idx < 0 || idx >= len(*m) {
+		return v, false
+	}
+
+	if idx == 0 {
+		return m.PopFront()
+	}
+	if idx == len(*m)-1 {
+		return m.PopBack()
+	}
+
+	v = (*m)[idx]
+	*m = append((*m)[0:idx], (*m)[idx+1:]...)
+
+	return v, true
+}
 
 // Value return json value, implement driver.Valuer interface
 func (m *JSONArray[V]) Value() (driver.Value, error) {
@@ -53,6 +227,7 @@ func (m *JSONArray[V]) Scan(value any) error {
 	return ScanValue(value, m)
 }
 
+// GormDBDataType implements migrator.GormDBDataTypeInterface interface
 func (m *JSONArray[V]) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	return GetGormDBDataType(db, field)
 }
@@ -69,6 +244,7 @@ func (m *Map[K, V]) Scan(value any) error {
 	return ScanValue(value, m)
 }
 
+// GormDBDataType implements migrator.GormDBDataTypeInterface interface
 func (m *Map[K, V]) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	return GetGormDBDataType(db, field)
 }
@@ -85,6 +261,7 @@ func (m *JSONMap[K, V]) Scan(value any) error {
 	return ScanValue(value, m)
 }
 
+// GormDBDataType implements migrator.GormDBDataTypeInterface interface
 func (m *JSONMap[K, V]) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	return GetGormDBDataType(db, field)
 }
@@ -121,4 +298,137 @@ func GetGormDBDataType(db *gorm.DB, field *schema.Field) string {
 		return "JSONB"
 	}
 	return ""
+}
+
+// JSONQueryExpression json query expression, implements clause.Expression interface to use as querier
+type JSONQueryExpression struct {
+	column      string
+	keys        []string
+	hasKeys     bool
+	equals      bool
+	equalsValue interface{}
+	extract     bool
+	path        string
+}
+
+// JSONQuery query column as json
+func JSONQuery(column string) *JSONQueryExpression {
+	return &JSONQueryExpression{column: column}
+}
+
+// Extract extract json with path
+func (jsonQuery *JSONQueryExpression) Extract(path string) *JSONQueryExpression {
+	jsonQuery.extract = true
+	jsonQuery.path = path
+	return jsonQuery
+}
+
+// HasKey returns clause.Expression
+func (jsonQuery *JSONQueryExpression) HasKey(keys ...string) *JSONQueryExpression {
+	jsonQuery.keys = keys
+	jsonQuery.hasKeys = true
+	return jsonQuery
+}
+
+// Equals Keys returns clause.Expression
+func (jsonQuery *JSONQueryExpression) Equals(value interface{}, keys ...string) *JSONQueryExpression {
+	jsonQuery.keys = keys
+	jsonQuery.equals = true
+	jsonQuery.equalsValue = value
+	return jsonQuery
+}
+
+// Build implements clause.Expression
+func (jsonQuery *JSONQueryExpression) Build(builder clause.Builder) {
+	if stmt, ok := builder.(*gorm.Statement); ok {
+		switch stmt.Dialector.Name() {
+		case "mysql", "sqlite":
+			switch {
+			case jsonQuery.extract:
+				builder.WriteString("JSON_EXTRACT(")
+				builder.WriteQuoted(jsonQuery.column)
+				builder.WriteByte(',')
+				builder.AddVar(stmt, jsonQuery.path)
+				builder.WriteString(")")
+			case jsonQuery.hasKeys:
+				if len(jsonQuery.keys) > 0 {
+					builder.WriteString("JSON_EXTRACT(")
+					builder.WriteQuoted(jsonQuery.column)
+					builder.WriteByte(',')
+					builder.AddVar(stmt, jsonQueryJoin(jsonQuery.keys))
+					builder.WriteString(") IS NOT NULL")
+				}
+			case jsonQuery.equals:
+				if len(jsonQuery.keys) > 0 {
+					builder.WriteString("JSON_EXTRACT(")
+					builder.WriteQuoted(jsonQuery.column)
+					builder.WriteByte(',')
+					builder.AddVar(stmt, jsonQueryJoin(jsonQuery.keys))
+					builder.WriteString(") = ")
+					if value, ok := jsonQuery.equalsValue.(bool); ok {
+						builder.WriteString(strconv.FormatBool(value))
+					} else {
+						stmt.AddVar(builder, jsonQuery.equalsValue)
+					}
+				}
+			}
+		case "postgres":
+			switch {
+			case jsonQuery.hasKeys:
+				if len(jsonQuery.keys) > 0 {
+					stmt.WriteQuoted(jsonQuery.column)
+					stmt.WriteString("::jsonb")
+					for _, key := range jsonQuery.keys[0 : len(jsonQuery.keys)-1] {
+						stmt.WriteString(" -> ")
+						stmt.AddVar(builder, key)
+					}
+
+					stmt.WriteString(" ? ")
+					stmt.AddVar(builder, jsonQuery.keys[len(jsonQuery.keys)-1])
+				}
+			case jsonQuery.equals:
+				if len(jsonQuery.keys) > 0 {
+					builder.WriteString(fmt.Sprintf("json_extract_path_text(%v::json,", stmt.Quote(jsonQuery.column)))
+
+					for idx, key := range jsonQuery.keys {
+						if idx > 0 {
+							builder.WriteByte(',')
+						}
+						stmt.AddVar(builder, key)
+					}
+					builder.WriteString(") = ")
+
+					if _, ok := jsonQuery.equalsValue.(string); ok {
+						stmt.AddVar(builder, jsonQuery.equalsValue)
+					} else {
+						stmt.AddVar(builder, fmt.Sprint(jsonQuery.equalsValue))
+					}
+				}
+			}
+		}
+	}
+}
+
+const prefix = "$."
+
+func jsonQueryJoin(keys []string) string {
+	if len(keys) == 1 {
+		return prefix + keys[0]
+	}
+
+	n := len(prefix)
+	n += len(keys) - 1
+	for i := 0; i < len(keys); i++ {
+		n += len(keys[i])
+	}
+
+	var b strings.Builder
+	b.Grow(n)
+	b.WriteString(prefix)
+	b.WriteString(keys[0])
+	for _, key := range keys[1:] {
+		b.WriteString(".")
+		b.WriteString(key)
+	}
+	return b.String()
 }

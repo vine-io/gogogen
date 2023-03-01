@@ -289,7 +289,7 @@ type ImportTracker interface {
 	AddType(*types.Type)
 	LocalNameOf(packagePath string) string
 	PathOf(localName string) (string, bool)
-	ImportLines() []string
+	ImportLines() map[string]string
 }
 
 type rawNamer struct {

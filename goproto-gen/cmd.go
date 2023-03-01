@@ -36,7 +36,10 @@ import (
 	utilbuild "github.com/vine-io/gogogen/util/build"
 )
 
-const tagEnable = "gogo:genproto"
+const (
+	tagEnable   = "gogo:genproto"
+	tagEmbedded = "embedded"
+)
 
 type Generator struct {
 	Common               args.GeneratorArgs

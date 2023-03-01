@@ -626,6 +626,7 @@ func tcNameToName(in string) types.Name {
 		strings.HasPrefix(in, "chan<-") ||
 		strings.HasPrefix(in, "chan ") ||
 		strings.HasPrefix(in, "func(") ||
+		strings.HasPrefix(in, "func (") ||
 		strings.HasPrefix(in, "*") ||
 		strings.HasPrefix(in, "map[") ||
 		strings.HasPrefix(in, "[") {
@@ -676,11 +677,15 @@ func (b *Builder) walkType(u types.Universe, useName *types.Name, in tc.Type) *t
 		out.Kind = types.Struct
 		for i := 0; i < t.NumFields(); i++ {
 			f := t.Field(i)
+			tt := f.Type()
+			if f.Type().Underlying() != nil {
+				tt = f.Type().Underlying()
+			}
 			m := types.Member{
 				Name:         f.Name(),
 				Embedded:     f.Anonymous(),
 				Tags:         t.Tag(i),
-				Type:         b.walkType(u, nil, f.Type()),
+				Type:         b.walkType(u, nil, tt),
 				CommentLines: splitLines(b.priorCommentLines(f.Pos(), 1).Text()),
 			}
 			out.Members = append(out.Members, m)

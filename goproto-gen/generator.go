@@ -57,7 +57,7 @@ func (g *genProtoIDL) PackageVars(c *generator.Context) []string {
 		"option (gogoproto.goproto_unrecognized_all) = false;",
 		"option (gogoproto.goproto_enum_prefix_all) = false;",
 		"option (gogoproto.goproto_getters_all) = false;",
-		fmt.Sprintf("option go_package = %q;", g.localGoPackage.Name),
+		fmt.Sprintf("option go_package = %q;", g.localGoPackage.Package),
 	}
 }
 func (g *genProtoIDL) Filename() string { return g.OptionalName + ".proto" }
@@ -143,14 +143,14 @@ func isOptionalAlias(t *types.Type) bool {
 	return true
 }
 
-func (g *genProtoIDL) Imports(c *generator.Context) (imports []string) {
-	lines := []string{}
+func (g *genProtoIDL) Imports(c *generator.Context) (imports map[string]string) {
+	lines := map[string]string{}
 	// TODO: this could be expressed more cleanly
-	for _, line := range g.imports.ImportLines() {
-		if g.omitGogo && line == "github.com/gogo/protobuf/gogoproto/gogo.proto" {
+	for k, line := range g.imports.ImportLines() {
+		if g.omitGogo && k == "github.com/gogo/protobuf/gogoproto/gogo.proto" {
 			continue
 		}
-		lines = append(lines, line)
+		lines[k] = line
 	}
 	return lines
 }
@@ -387,10 +387,16 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 			fmt.Fprintf(out, "repeated ")
 		case field.Required:
 			fmt.Fprintf(out, "required ")
+		case field.Embedded:
+			fmt.Fprintf(out, "required ")
 		default:
 			fmt.Fprintf(out, "optional ")
 		}
-		sw.Do(`$.Type|local$ $.Name$ = $.Tag$`, field)
+		if field.Embedded {
+			sw.Do(`$.Type|local$ $.Name$ = $.Tag$`, field)
+		} else {
+			sw.Do(`$.Type|local$ $.Name$ = $.Tag$`, field)
+		}
 		if len(field.Extras) > 0 {
 			extras := []string{}
 			for k, v := range field.Extras {
@@ -422,6 +428,7 @@ type protoField struct {
 	Name     string
 	Type     *types.Type
 	Map      bool
+	Embedded bool
 	Repeated bool
 	Optional bool
 	Required bool
@@ -642,6 +649,13 @@ func membersToFields(locator ProtobufLocator, t *types.Type, localPackage types.
 		protobufTag := tags.Get("protobuf")
 		if protobufTag == "-" {
 			continue
+		}
+
+		markers := types.ExtractCommentTags("+", m.CommentLines)
+		if v := markers[tagEmbedded]; v != nil {
+			field.Embedded = true
+			field.Type = m.Type
+			field.Type.Name.Name = m.Name
 		}
 
 		if err := protobufTagToField(protobufTag, &field, m, t, localPackage); err != nil {

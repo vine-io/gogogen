@@ -183,7 +183,46 @@ func (p *gormPackage) ExtractGeneratedType(t *ast.TypeSpec) bool {
 func (p *gormPackage) generatorFunc(c *generator.Context) []generator.Generator {
 	generators := []generator.Generator{}
 
-	p.Imports.AddGorm()
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "gorm",
+			Package: "gorm",
+			Path:    "gorm.io/gorm",
+		},
+	})
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "clause",
+			Package: "clause",
+			Path:    "gorm.io/gorm/clause",
+		},
+	})
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "jsonpatch",
+			Package: "jsonpatch",
+			Path:    "github.com/evanphx/json-patch/v5",
+		},
+	})
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "jsonpatch",
+			Package: "jsonpatch",
+			Path:    "github.com/evanphx/json-patch/v5",
+		},
+	})
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "json",
+			Package: "json",
+			Path:    "github.com/json-iterator/go",
+		},
+	})
 
 	generators = append(generators, &genGormIDL{
 		DefaultGen: generator.DefaultGen{

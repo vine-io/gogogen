@@ -56,7 +56,7 @@ type File struct {
 	Header            []byte
 	PackagePath       string
 	PackageSourcePath string
-	Imports           map[string]struct{}
+	Imports           map[string]string
 	Vars              bytes.Buffer
 	Consts            bytes.Buffer
 	Body              bytes.Buffer
@@ -133,7 +133,7 @@ type Generator interface {
 	// imports in the format `name "path/to/pkg"`. Imports will be called
 	// after Init, PackageVars, PackageConsts, and GenerateType, to allow
 	// you to keep track of what imports you actually need.
-	Imports(*Context) []string
+	Imports(*Context) map[string]string
 
 	// Preferred file name of this generator, not including a path. It is
 	// allowed for multiple generators to use the same filename, but it's

@@ -42,7 +42,7 @@ type DefaultGen struct {
 func (d DefaultGen) Name() string                                        { return d.OptionalName }
 func (d DefaultGen) Filter(*Context, *types.Type) bool                   { return true }
 func (d DefaultGen) Namers(*Context) namer.NameSystems                   { return nil }
-func (d DefaultGen) Imports(*Context) []string                           { return []string{} }
+func (d DefaultGen) Imports(*Context) map[string]string                  { return map[string]string{} }
 func (d DefaultGen) PackageVars(*Context) []string                       { return []string{} }
 func (d DefaultGen) PackageConsts(*Context) []string                     { return []string{} }
 func (d DefaultGen) GenerateType(*Context, *types.Type, io.Writer) error { return nil }

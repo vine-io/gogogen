@@ -34,15 +34,3 @@ func NewImportTracker(local types.Name, typesToAdd ...*types.Type) *ImportTracke
 		DefaultImportTracker: tracker,
 	}
 }
-
-// AddGorm ensures that support for the gorm extension is added.
-func (tracker *ImportTracker) AddGorm() {
-	tracker.AddType(&types.Type{
-		Kind: types.Gorm,
-		Name: types.Name{
-			Name:    "gorm",
-			Package: "gorm",
-			Path:    "gorm.io/gorm",
-		},
-	})
-}
