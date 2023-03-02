@@ -51,7 +51,6 @@ func (in *Meta) DeepCopy() *Meta {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Resource) DeepCopyInto(out *Resource) {
 	*out = *in
-	in.Meta.DeepCopyInto(&out.Meta)
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make([]string, len(*in))

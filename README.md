@@ -1,7 +1,8 @@
 # 安装
 
 ```shell
-go get github.com/vine-io/gogogen/cmd/deepcopy-gen
-go get github.com/vine-io/gogogen/cmd/goproto-gen
-go get github.com/vine-io/gogogen/cmd/set-gen
+go install github.com/vine-io/gogogen/cmd/deepcopy-gen@latest
+go install github.com/vine-io/gogogen/cmd/goproto-gen@latest
+go install github.com/vine-io/gogogen/cmd/gogorm-gen@latest
+go install github.com/vine-io/gogogen/cmd/set-gen@latest
 ```

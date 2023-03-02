@@ -346,8 +346,8 @@ func deepCopyMethodOrDie(t *types.Type) *types.Signature {
 // or:
 //
 //	func (t *T) DeepCopyInto(t *T)
-func deepCopyIntoMethod(t *types.Type) (*types.Signature, error) {
-	f, found := t.Methods["DeepCopyInto"]
+func deepCopyIntoMethod(t *types.Type, name string) (*types.Signature, error) {
+	f, found := t.Methods[name]
 	if !found {
 		return nil, nil
 	}
@@ -377,7 +377,7 @@ func deepCopyIntoMethod(t *types.Type) (*types.Signature, error) {
 // deepCopyIntoMethodOrDie returns the signature of a DeepCopyInto() method, nil or calls log.Fatalf
 // if the type is wrong.
 func deepCopyIntoMethodOrDie(t *types.Type) *types.Signature {
-	ret, err := deepCopyIntoMethod(t)
+	ret, err := deepCopyIntoMethod(t, "DeepCopyInto")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -631,6 +631,16 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 			sw.Do("return out\n", nil)
 		}
 		sw.Do("}\n\n", nil)
+
+		sw.Do("// DeepCopyFrom is an auto-generated deepcopy function, copying from $.type|raw$.\n", args)
+		if isReference(t) {
+			sw.Do("func (in $.type|raw$) DeepCopyFrom(o $.type|raw$) {\n", args)
+		} else {
+			sw.Do("func (in *$.type|raw$) DeepCopyFrom(o *$.type|raw$) {\n", args)
+			sw.Do("if in == nil { return }\n", nil)
+		}
+		sw.Do("o.DeepCopyInto(in)\n", nil)
+		sw.Do("}\n\n", nil)
 	}
 
 	intfs, nonPointerReceiver, err := g.deepCopyableInterfaces(c, t)
@@ -651,6 +661,13 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 			sw.Do("return nil\n", nil)
 			sw.Do("}\n\n", nil)
 		}
+
+		sw.Do(fmt.Sprintf("// DeepCopy%s is an auto-generated deepcopy function, copying from $.type|raw$.\n", intf.Name.Name), argsFromType(t, intf))
+		sw.Do(fmt.Sprintf("func (in *$.type|raw$) DeepCopyFrom%s(o $.type2|raw$) {\n", intf.Name.Name), argsFromType(t, intf))
+		sw.Do("if v, ok := o.(*$.type|raw$); ok {\n", argsFromType(t, intf))
+		sw.Do("in.DeepCopyFrom(v)\n", nil)
+		sw.Do("}\n", nil)
+		sw.Do("}\n\n", nil)
 	}
 
 	return sw.Error()

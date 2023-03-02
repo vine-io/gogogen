@@ -17,6 +17,7 @@ package meta
 import "github.com/vine-io/gogogen/runtime/dao"
 
 // +gogo:deepcopy-gen=true
+// +gogo:deepcopy-gen:interfaces=github.com/vine-io/apimachinery/runtime.Object
 // +gogo:genproto=true
 // +gogo:gengorm=true
 // 资源元数据
@@ -58,7 +59,7 @@ type Sub struct {
 type Resource struct {
 	// +embedded
 	// +protobuf.embed
-	Meta `json:",inline" gorm:"embedded" protobuf:"bytes,1,req,name=meta"`
+	//Meta `json:",inline" gorm:"embedded" protobuf:"bytes,1,req,name=meta"`
 
 	Spec string `json:"spec" gorm:"column:spec" protobuf:"bytes,2,opt,name=spec"`
 
