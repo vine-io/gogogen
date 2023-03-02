@@ -632,11 +632,11 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 		}
 		sw.Do("}\n\n", nil)
 
-		sw.Do("// DeepCopyFrom is an auto-generated deepcopy function, copying from $.type|raw$.\n", args)
+		sw.Do("// DeepFrom is an auto-generated deepcopy function, copying from $.type|raw$.\n", args)
 		if isReference(t) {
-			sw.Do("func (in $.type|raw$) DeepCopyFrom(o $.type|raw$) {\n", args)
+			sw.Do("func (in $.type|raw$) DeepFrom(o $.type|raw$) {\n", args)
 		} else {
-			sw.Do("func (in *$.type|raw$) DeepCopyFrom(o *$.type|raw$) {\n", args)
+			sw.Do("func (in *$.type|raw$) DeepFrom(o *$.type|raw$) {\n", args)
 			sw.Do("if in == nil { return }\n", nil)
 		}
 		sw.Do("o.DeepCopyInto(in)\n", nil)
@@ -662,10 +662,10 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 			sw.Do("}\n\n", nil)
 		}
 
-		sw.Do(fmt.Sprintf("// DeepCopy%s is an auto-generated deepcopy function, copying from $.type|raw$.\n", intf.Name.Name), argsFromType(t, intf))
-		sw.Do(fmt.Sprintf("func (in *$.type|raw$) DeepCopyFrom%s(o $.type2|raw$) {\n", intf.Name.Name), argsFromType(t, intf))
+		sw.Do(fmt.Sprintf("// DeepFrom%s is an auto-generated deepcopy function, copying from $.type|raw$.\n", intf.Name.Name), argsFromType(t, intf))
+		sw.Do(fmt.Sprintf("func (in *$.type|raw$) DeepFrom%s(o $.type2|raw$) {\n", intf.Name.Name), argsFromType(t, intf))
 		sw.Do("if v, ok := o.(*$.type|raw$); ok {\n", argsFromType(t, intf))
-		sw.Do("in.DeepCopyFrom(v)\n", nil)
+		sw.Do("in.DeepFrom(v)\n", nil)
 		sw.Do("}\n", nil)
 		sw.Do("}\n\n", nil)
 	}
