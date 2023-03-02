@@ -52,6 +52,7 @@ func (g *genGormIDL) Namers(c *generator.Context) namer.NameSystems {
 		// The local namer returns the correct protobuf name for a proto type
 		// in the context of a package
 		"local": localNamer{g.localPackage},
+		"raw":   namer.NewRawNamer("", nil),
 	}
 }
 
@@ -115,14 +116,8 @@ func isGormable(seen map[*types.Type]bool, t *types.Type) bool {
 	}
 }
 
-// isOptionalAlias should return true if the specified type has an underlying type
-// (is an alias) of a map or slice and has the comment tag protobuf.nullable=true,
-// indicating that the type should be nullable in protobuf.
 func isOptionalAlias(t *types.Type) bool {
 	if t.Underlying == nil || (t.Underlying.Kind != types.Map && t.Underlying.Kind != types.Slice) {
-		return false
-	}
-	if extractBoolTagOrDie("gorm.nullable", t.CommentLines) == false {
 		return false
 	}
 	return true
@@ -154,14 +149,22 @@ func (g *genGormIDL) GenerateType(c *generator.Context, t *types.Type, w io.Writ
 
 		t: t,
 	}
+
+	var err error
 	switch t.Kind {
 	case types.Alias:
-		return b.doAlias(sw)
+		err = b.doAlias(sw)
 	case types.Struct:
-		return b.doStruct(sw)
+		err = b.doStruct(sw)
 	default:
-		return b.unknown(sw)
+		err = b.unknown(sw)
 	}
+
+	if err != nil {
+		return err
+	}
+
+	return sw.Error()
 }
 
 // GormFromGoNamer finds the gorm name of a type (and its package, and
@@ -310,7 +313,11 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 		}
 		genComment(out, field.CommentLines, "  ")
 		fmt.Fprintf(out, "  ")
-		sw.Do("$.Name$ $.Type|local$ "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		if field.embedded {
+			sw.Do("$.Name$ string "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		} else {
+			sw.Do("$.Name$ $.Type|local$ "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		}
 		fmt.Fprintf(out, "\n")
 		if i != len(fields)-1 {
 			fmt.Fprintf(out, "\n")
@@ -422,46 +429,162 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 		sw.Doln("")
 	}
 
+	interfaceExt := false
+	markers := types.ExtractCommentTags("+"+tagEnable+":", b.t.CommentLines)
+	if v, ok := markers[tagExternal]; ok {
+		if len(v) > 0 && v[0] == "false" {
+			return nil
+		}
+
+		if len(v) > 0 && v[0] == "interfaces" {
+			interfaceExt = true
+		}
+	}
+
 	// generate storage struct
 	sw.Dof(`type $.Name.Name$Storage struct {`, b.t)
-	sw.Doln("*gorm.DB")
+	sw.Doln("tx *gorm.DB")
+	sw.Dof("m *$.Name.Name$", b.t)
 	sw.Doln("exprs []clause.Expression")
 	sw.Doln("}")
 	sw.Doln("")
 
 	// generate New function for storage
-	sw.Dof(`func New$.Name.Name$Storage(db *gorm.DB) *$.Name.Name$Storage {`, b.t)
+	sw.Dof(`func New$.Name.Name$Storage(db *gorm.DB, m *$.Name.Name$) *$.Name.Name$Storage {`, b.t)
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
-	sw.Dof(`return &$.Name.Name$Storage{DB: db, exprs: exprs}`, b.t)
+	sw.Dof(`return &$.Name.Name$Storage{tx: db, m: m, exprs: exprs}`, b.t)
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) Target() reflect.Type {`, b.t)
+	sw.Dof(`return reflect.TypeOf(new($.Name.Name$))`, b.t)
+	sw.Doln("}")
+	sw.Doln("")
+
+	sw.Dof(`func (s *$.Name.Name$Storage) AutoMigrate() error {`, b.t)
+	sw.Dof(`return s.tx.AutoMigrate(&$.Name.Name${})`, b.t)
+	sw.Doln("}")
+	sw.Doln("")
+
+	if interfaceExt {
+		sw.Dof(`func (s *$.Name.Name$Storage) Load(db *gorm.DB, o runtime.Object) error {`, b.t)
+		sw.Dof(`m, ok := o.(*$.Name.Name$)`, b.t)
+		sw.Doln(`if ok { return storage.ErrInvalidObject }`)
+		sw.Dof(`s.XXLoad(db, m)`, b.t)
+		sw.Doln(`return nil`)
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) FindPage(ctx context.Context, page, size int32) (runtime.Object, error) {`, b.t)
+		sw.Dof(`items, total, err := s.XXFindPage(ctx, page, size)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Dof("o := &$.Name.Name$List{}", b.t)
+		sw.Doln("if len(items) > 0 {")
+		sw.Doln("o.ResourceVersion = items[0].ResourceVersion")
+		sw.Doln("o.TypeMeta = items[0].TypeMeta")
+		sw.Doln("}\n")
+		sw.Doln("o.Page = page")
+		sw.Doln("o.Size = size")
+		sw.Doln("o.Total = total")
+		sw.Doln("o.Items = items\n")
+		sw.Doln("return o, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) FindAll(ctx context.Context) (runtime.Object, error) {`, b.t)
+		sw.Dof(`items, err := s.XXFindAll(ctx)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Dof("o := &$.Name.Name$List{}", b.t)
+		sw.Doln("if len(items) > 0 {")
+		sw.Doln("o.ResourceVersion = items[0].ResourceVersion")
+		sw.Doln("o.TypeMeta = items[0].TypeMeta")
+		sw.Doln("}\n")
+		sw.Doln("o.Total = int64(len(items))")
+		sw.Doln("o.Items = items\n")
+		sw.Doln("return o, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) FindPk(ctx context.Context, pk any) (runtime.Object, error) {`, b.t)
+		sw.Dof(`data, err := s.XXFindById(ctx, pk)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Doln("return data, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) FindOne(ctx context.Context) (runtime.Object, error) {`, b.t)
+		sw.Dof(`data, err := s.XXFindOne(ctx)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Doln("return data, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) Cond(exprs ...clause.Expression) storage.Storage {`, b.t)
+		sw.Doln("s.XXCond(exprs...)")
+		sw.Doln("return s")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) Create(ctx context.Context) (runtime.Object, error) {`, b.t)
+		sw.Dof(`err := s.XXCreate(ctx)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Doln("return s.m, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) Updates(ctx context.Context) (runtime.Object, error) {`, b.t)
+		sw.Dof(`err := s.XXUpdates(ctx)`, b.t)
+		sw.Doln(`if err != nil { return nil, err }`)
+		sw.Doln("")
+		sw.Doln("return s.m, nil")
+		sw.Doln("}")
+		sw.Doln("")
+
+		sw.Dof(`func (s *$.Name.Name$Storage) Delete(ctx context.Context, soft bool) error {`, b.t)
+		sw.Dof(`err := s.XXDelete(ctx, soft)`, b.t)
+		sw.Doln(`if err != nil { return err }`)
+		sw.Doln("")
+		sw.Doln("return nil")
+		sw.Doln("}")
+		sw.Doln("")
+	}
+
+	sw.Dof(`func (s *$.Name.Name$Storage) XXLoad(db *gorm.DB, m *$.Name.Name$) {`, b.t)
+	sw.Dof(`s.tx, s.m = db, m`, b.t)
 	sw.Doln("}")
 	sw.Doln("")
 
 	// generate CURD codes
-	sw.Dof(`func (s *$.Name.Name$Storage) Count(ctx context.Context, m $.Name.Name$) (total int64, err error) {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) Count(ctx context.Context) (total int64, err error) {`, b.t)
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
-	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
+	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
 	sw.Doln(`err = tx.Clauses(clauses...).Count(&total).Error`)
 	sw.Doln("return")
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXFindPage(ctx context.Context, m $.Name.Name$, page, size int32) ([]*$.Name.Name$, int64, error) {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindPage(ctx context.Context, page, size int32) ([]*$.Name.Name$, int64, error) {`, b.t)
 	sw.Doln("")
-	sw.Doln("total, err := s.Count(ctx, m)")
+	sw.Doln("total, err := s.Count(ctx)")
 	sw.Doln("if err != nil {")
 	sw.Doln("return nil, 0, err")
 	sw.Doln("}")
 	sw.Doln("")
-	sw.Doln("pk, _, _ := m.PrimaryKey()")
+	sw.Doln("pk, _, _ := s.m.PrimaryKey()")
 	sw.Doln("limit := int(size)")
 	sw.Doln("s.exprs = append(s.exprs,")
-	sw.Doln("clause.OrderBy{Columns: []clause.OrderByColumn{{Column: clause.Column{Table: m.TableName(), Name: pk}, Desc: true}}},")
+	sw.Doln("clause.OrderBy{Columns: []clause.OrderByColumn{{Column: clause.Column{Table: s.m.TableName(), Name: pk}, Desc: true}}},")
 	sw.Doln("clause.Limit{Offset: int((page - 1) * size), Limit: &limit},")
 	sw.Doln(")")
 	sw.Doln("")
-	sw.Doln("data, err := s.XXFindAll(ctx, m)")
+	sw.Doln("data, err := s.XXFindAll(ctx)")
 	sw.Doln(`if err != nil {`)
 	sw.Doln("return nil, 0, err")
 	sw.Doln("}")
@@ -470,12 +593,12 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXFindAll(ctx context.Context, m $.Name.Name$) ([]*$.Name.Name$, error) {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindAll(ctx context.Context) ([]*$.Name.Name$, error) {`, b.t)
 	sw.Dof("dest := make([]*$.Name.Name$, 0)", b.t)
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
-	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
+	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
 	sw.Doln(`if err := tx.Clauses(clauses...).Find(&dest).Error; err != nil {`)
 	sw.Doln("return nil, err")
 	sw.Doln("}")
@@ -486,10 +609,10 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 
 	sw.Dof(`func (s *$.Name.Name$Storage) XXFindById(ctx context.Context, id any) (*$.Name.Name$, error) {`, b.t)
 	sw.Dof("m := $.Name.Name${}", b.t)
-	sw.Doln("pk, _, _ := m.PrimaryKey()")
+	sw.Doln("pk, _, _ := s.m.PrimaryKey()")
 	sw.Doln("")
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln(`if err := tx.Where(pk+" = ?", id).First(&m).Error; err != nil {`)
 	sw.Doln("return nil, err")
 	sw.Doln("}")
@@ -498,19 +621,19 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXFindOne(ctx context.Context, m $.Name.Name$) (*$.Name.Name$, error) {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXFindOne(ctx context.Context) (m *$.Name.Name$, err error) {`, b.t)
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
-	sw.Doln("clauses := append(s.extractClauses(&m), s.exprs...)")
-	sw.Doln(`if err := tx.Clauses(clauses...).First(&m).Error; err != nil {`)
+	sw.Dof("tx := s.tx.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
+	sw.Doln(`if err = tx.Clauses(clauses...).First(&m).Error; err != nil {`)
 	sw.Doln("return nil, err")
 	sw.Doln("}")
 	sw.Doln("")
-	sw.Doln("return &m, nil")
+	sw.Doln("return m, nil")
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) Cond(exprs ...clause.Expression) *$.Name.Name$Storage {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXCond(exprs ...clause.Expression) *$.Name.Name$Storage {`, b.t)
 	sw.Doln("s.exprs = append(s.exprs, exprs...)")
 	sw.Doln("return s")
 	sw.Doln("}")
@@ -533,8 +656,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 			return exprs
 		}
 	*/
-	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses(m *$.Name.Name$) []clause.Expression {`, b.t)
-	sw.Doln("")
+	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses() []clause.Expression {`, b.t)
+	sw.Doln("m := s.m")
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
 	for _, field := range fields {
 		if field.embedded {
@@ -596,11 +719,11 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXCreate(ctx context.Context, m *$.Name.Name$) error {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXCreate(ctx context.Context) error {`, b.t)
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
-	sw.Doln(`if err := tx.Create(&m).Error; err != nil {`)
+	sw.Doln(`if err := tx.Create(s.m).Error; err != nil {`)
 	sw.Doln("return err")
 	sw.Doln("}")
 	sw.Doln("")
@@ -608,11 +731,17 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXUpdates(ctx context.Context, m *$.Name.Name$) error {`, b.t)
-	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) XXUpdates(ctx context.Context) error {`, b.t)
+	sw.Doln("pk, pkv, isNil := s.m.PrimaryKey()")
+	sw.Doln("if isNil {")
+	sw.Doln(`return errors.New("missing primary key")`)
+	sw.Doln("}")
 	sw.Doln("")
-	sw.Doln(`if err := tx.Updates(&m).Error; err != nil {`)
+	sw.Doln("m := s.m")
+	sw.Doln("session := dao.GetSession(ctx)")
+	sw.Dof("tx := s.tx.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Doln("")
+	sw.Doln(`if err := tx.Where(pk+" = ?", pkv).Updates(&m).Error; err != nil {`)
 	sw.Doln("return err")
 	sw.Doln("}")
 	sw.Doln("")
@@ -677,7 +806,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("return nil, err")
 	sw.Doln("}")
 	sw.Doln("")
-	sw.Doln("if err = s.XXUpdates(ctx, m); err != nil {")
+	sw.Doln("s.m = m")
+	sw.Doln("if err = s.XXUpdates(ctx); err != nil {")
 	sw.Doln("return nil, err")
 	sw.Doln("}")
 	sw.Doln("")
@@ -685,28 +815,14 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) XXBatchDelete(ctx context.Context, m *$.Name.Name$) error {`, b.t)
-	sw.Doln("")
-	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
-	sw.Doln("")
-	sw.Doln("clauses := append(s.exprs, s.extractClauses(m)...)")
-	sw.Dof(`if err := tx.Clauses(clauses...).Delete(&$.Name.Name${}).Error; err != nil {`, b.t)
-	sw.Doln("return err")
-	sw.Doln("}")
-	sw.Doln("")
-	sw.Doln("return nil")
-	sw.Doln("}")
-	sw.Doln("")
-
-	sw.Dof(`func (s *$.Name.Name$Storage) XXDelete(ctx context.Context, m *$.Name.Name$) error {`, b.t)
-	sw.Doln("pk, pkv, isNil := m.PrimaryKey()")
+	sw.Dof(`func (s *$.Name.Name$Storage) XXDelete(ctx context.Context, soft bool) error {`, b.t)
+	sw.Doln("pk, pkv, isNil := s.m.PrimaryKey()")
 	sw.Doln("if isNil {")
 	sw.Doln(`return errors.New("missing primary key")`)
 	sw.Doln("}")
 	sw.Doln("")
 	sw.Doln("session := dao.GetSession(ctx)")
-	sw.Dof("tx := s.DB.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
+	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
 	sw.Dof(`if err := tx.Where(pk+" = ?", pkv).Delete(&$.Name.Name${}).Error; err != nil {`, b.t)
 	sw.Doln("return err")
@@ -716,7 +832,7 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	return nil
+	return sw.Error()
 }
 
 type gormField struct {

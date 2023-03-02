@@ -16,10 +16,11 @@ package meta
 
 import "github.com/vine-io/gogogen/runtime/dao"
 
-// +gogo:deepcopy-gen=true
-// +gogo:deepcopy-gen:interfaces=github.com/vine-io/apimachinery/runtime.Object
+// +gogo:deepcopy=true
+// +gogo:deepcopy:interfaces=github.com/vine-io/apimachinery/runtime.Object
 // +gogo:genproto=true
 // +gogo:gengorm=true
+// +gogo:gengorm:external=false
 // 资源元数据
 type Meta struct {
 	// 资源类型
@@ -46,6 +47,7 @@ type Meta struct {
 // +gogo:deepcopy-gen=true
 // +gogo:genproto=true
 // +gogo:gengorm=true
+// +gogo:gengorm:external=false
 type Sub struct {
 	Name string `json:"name" gorm:"column:name" protobuf:"bytes,1,opt,name=name"`
 	// +primaryKey
@@ -55,11 +57,12 @@ type Sub struct {
 // +gogo:genproto=true
 // +gogo:deepcopy-gen=true
 // +gogo:gengorm=true
+// +gogo:gengorm:external=interfaces
 // 资源元数据
 type Resource struct {
 	// +embedded
 	// +protobuf.embed
-	//Meta `json:",inline" gorm:"embedded" protobuf:"bytes,1,req,name=meta"`
+	Meta `json:",inline" gorm:"embedded" protobuf:"bytes,1,req,name=meta"`
 
 	Spec string `json:"spec" gorm:"column:spec" protobuf:"bytes,2,opt,name=spec"`
 

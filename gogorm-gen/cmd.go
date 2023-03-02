@@ -37,6 +37,7 @@ import (
 
 const (
 	tagEnable     = "gogo:gengorm"
+	tagExternal   = "external"
 	tagPrimaryKey = "primaryKey"
 	tagEmbedded   = "embedded"
 	tagUnique     = "unique"

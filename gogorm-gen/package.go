@@ -186,11 +186,21 @@ func (p *gormPackage) generatorFunc(c *generator.Context) []generator.Generator 
 	p.Imports.AddType(&types.Type{
 		Kind: types.Gorm,
 		Name: types.Name{
+			Name:    "errors",
+			Package: "errors",
+			Path:    "errors",
+		},
+	})
+
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
 			Name:    "gorm",
 			Package: "gorm",
 			Path:    "gorm.io/gorm",
 		},
 	})
+
 	p.Imports.AddType(&types.Type{
 		Kind: types.Gorm,
 		Name: types.Name{
@@ -199,6 +209,7 @@ func (p *gormPackage) generatorFunc(c *generator.Context) []generator.Generator 
 			Path:    "gorm.io/gorm/clause",
 		},
 	})
+
 	p.Imports.AddType(&types.Type{
 		Kind: types.Gorm,
 		Name: types.Name{
@@ -215,12 +226,40 @@ func (p *gormPackage) generatorFunc(c *generator.Context) []generator.Generator 
 			Path:    "github.com/evanphx/json-patch/v5",
 		},
 	})
+
 	p.Imports.AddType(&types.Type{
 		Kind: types.Gorm,
 		Name: types.Name{
 			Name:    "json",
 			Package: "json",
 			Path:    "github.com/json-iterator/go",
+		},
+	})
+
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "runtime",
+			Package: "runtime",
+			Path:    "github.com/vine-io/apimachinery/runtime",
+		},
+	})
+
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "schema",
+			Package: "schema",
+			Path:    "gorm.io/gorm/schema",
+		},
+	})
+
+	p.Imports.AddType(&types.Type{
+		Kind: types.Gorm,
+		Name: types.Name{
+			Name:    "dao",
+			Package: "dao",
+			Path:    "github.com/vine-io/apimachinery/storage/dao",
 		},
 	})
 

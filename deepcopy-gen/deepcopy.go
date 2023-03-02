@@ -37,7 +37,7 @@ type CustomArgs struct {
 
 // This is the comment tag carries parameters for deep-copy generation.
 const (
-	tagEnableName              = "gogo:deepcopy-gen"
+	tagEnableName              = "gogo:deepcopy"
 	interfacesTagName          = tagEnableName + ":interfaces"
 	interfaceNonPointerTagName = tagEnableName + ":nonpointer-interfaces" // attach the DeepCopy<Interface> methods to the
 )
@@ -506,6 +506,7 @@ func extractInterfacesTag(t *types.Type) []string {
 	}
 	return result
 }
+
 func extractNonPointerInterfaces(t *types.Type) (bool, error) {
 	comments := append(append([]string{}, t.SecondClosestCommentLines...), t.CommentLines...)
 	values := types.ExtractCommentTags("+", comments)[interfaceNonPointerTagName]
@@ -670,7 +671,12 @@ func (g *genDeepCopy) GenerateType(c *generator.Context, t *types.Type, w io.Wri
 		sw.Do("}\n\n", nil)
 	}
 
-	return sw.Error()
+	err = sw.Error()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // isReference return true for pointer, maps, slices, and aliases of those.

@@ -47,7 +47,7 @@ type Builtin interface {
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
 		~complex64 | ~complex128 |
 		~float32 | ~float64 |
-		~string | ~byte | ~rune | ~uintptr
+		~string | ~uintptr
 }
 
 type PrimaryKey interface {
