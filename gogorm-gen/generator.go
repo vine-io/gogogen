@@ -223,9 +223,9 @@ func (p gormLocator) GormTypeFor(t *types.Type) (*types.Type, error) {
 	// it's a message
 	if t.Kind == types.Struct || isOptionalAlias(t) {
 		tt := &types.Type{
-			Name: p.namer.GoNameToGormName(t.Name),
-			Kind: types.Gorm,
-
+			Name:         p.namer.GoNameToGormName(t.Name),
+			Kind:         types.Gorm,
+			Members:      t.Members,
 			CommentLines: t.CommentLines,
 		}
 
@@ -675,64 +675,7 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses() []clause.Expression {`, b.t)
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
 	for _, field := range fields {
-		if field.embedded {
-			continue
-		}
-
-		ft := field.Type
-		if ft.Underlying != nil {
-			ft = ft.Underlying
-		}
-		if ft.Key != nil && ft.Elem != nil {
-			sw.Dof(`if s.m.$.Name$ != nil {`, field)
-			sw.Dof(`for k, v := range s.m.$.Name$ {`, field)
-			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, k))`, field)
-			sw.Doln("}")
-			sw.Doln("}")
-		} else if ft.Elem != nil {
-			sw.Dof(`if s.m.$.Name$ != nil {`, field)
-			sw.Dof(`for _, item := range s.m.$.Name$ {`, field)
-			if ft.Elem.Kind == "Builtin" {
-				sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").HasKey(item))`, field)
-			} else {
-				sw.Dof(`for k, v := range dao.FieldPatch(item) {`, field)
-				sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, strings.Split(k, ".")...))`, field)
-				sw.Doln("}")
-			}
-			sw.Doln("}")
-			sw.Doln("}")
-		} else {
-			switch ft.Name.Name {
-			case "int", "int8", "int16", "int32", "int64",
-				"uint", "uint8", "uint16", "uint32", "uint64",
-				"float", "double":
-				if ft.Underlying != nil {
-					sw.Dof(`if s.m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
-					sw.Doln("}")
-				} else {
-					sw.Dof(`if s.m.$.Name$ != 0 {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", s.m.$.Name$))`, field)
-					sw.Doln("}")
-				}
-			case "string":
-				if ft.Underlying != nil {
-					sw.Dof(`if s.m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(*s.m.$.Name$)).Build("$.GormName$", *s.m.$.Name$))`, field)
-					sw.Doln("}")
-				} else {
-					sw.Dof(`if s.m.$.Name$ != "" {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(s.m.$.Name$)).Build("$.GormName$", s.m.$.Name$))`, field)
-					sw.Doln("}")
-				}
-			case "bool":
-				if ft.Underlying != nil {
-					sw.Dof(`if s.m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
-					sw.Doln("}")
-				}
-			}
-		}
+		scanField(sw, field)
 	}
 	sw.Doln("")
 	sw.Doln("return exprs")
@@ -853,6 +796,162 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("")
 
 	return sw.Error()
+}
+
+func scanField(sw *generator.SnippetWriter, field gormField) {
+	if field.embedded {
+		for _, m := range field.Type.Members {
+			scanMember(sw, m)
+		}
+	}
+
+	ft := field.Type
+	if ft.Underlying != nil {
+		ft = ft.Underlying
+	}
+	if ft.Key != nil && ft.Elem != nil {
+		sw.Dof(`if s.m.$.Name$ != nil {`, field)
+		sw.Dof(`for k, v := range s.m.$.Name$ {`, field)
+		sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, k))`, field)
+		sw.Doln("}")
+		sw.Doln("}")
+	} else if ft.Elem != nil {
+		sw.Dof(`if s.m.$.Name$ != nil {`, field)
+		sw.Dof(`for _, item := range s.m.$.Name$ {`, field)
+		if ft.Elem.Kind == "Builtin" {
+			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").HasKey(item))`, field)
+		} else {
+			sw.Dof(`for k, v := range dao.FieldPatch(item) {`, field)
+			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, strings.Split(k, ".")...))`, field)
+			sw.Doln("}")
+		}
+		sw.Doln("}")
+		sw.Doln("}")
+	} else {
+		switch ft.Name.Name {
+		case "int", "int8", "int16", "int32", "int64",
+			"uint", "uint8", "uint16", "uint32", "uint64",
+			"float", "double":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, field)
+				sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
+				sw.Doln("}")
+			} else {
+				sw.Dof(`if s.m.$.Name$ != 0 {`, field)
+				sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", s.m.$.Name$))`, field)
+				sw.Doln("}")
+			}
+		case "string":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, field)
+				sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(*s.m.$.Name$)).Build("$.GormName$", *s.m.$.Name$))`, field)
+				sw.Doln("}")
+			} else {
+				sw.Dof(`if s.m.$.Name$ != "" {`, field)
+				sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(s.m.$.Name$)).Build("$.GormName$", s.m.$.Name$))`, field)
+				sw.Doln("}")
+			}
+		case "bool":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, field)
+				sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
+				sw.Doln("}")
+			}
+		}
+	}
+}
+
+func scanMember(sw *generator.SnippetWriter, m types.Member) {
+
+	ft := m.Type
+	if ft.Underlying != nil {
+		ft = ft.Underlying
+	}
+
+	tags := reflect.StructTag(m.Tags)
+
+	var gname string
+	if tag := tags.Get("gorm"); len(tag) > 0 {
+		parts := strings.Split(tag, ";")
+		for _, part := range parts {
+			if strings.HasPrefix(part, "column:") {
+				gname = strings.TrimPrefix(part, "column:")
+				break
+			}
+		}
+	}
+
+	if tag := tags.Get("json"); len(tag) > 0 {
+		parts := strings.Split(tag, ",")
+		if len(gname) == 0 && len(parts[0]) != 0 {
+			gname = parts[0]
+		}
+		if gname != "-" {
+			i := 0
+			length := len(gname)
+			buf := &bytes.Buffer{}
+			for i < length {
+				c := gname[i]
+				if c == '.' || c == '-' {
+					c = '_'
+				}
+				i += 1
+				buf.WriteByte(c)
+			}
+			gname = buf.String()
+		}
+	}
+
+	if ft.Key != nil && ft.Elem != nil {
+		sw.Dof(`if s.m.$.Name$ != nil {`, m)
+		sw.Dof(`for k, v := range s.m.$.Name$ {`, m)
+		sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.JSONQuery("%s").Equals(v, k))`, gname), m)
+		sw.Doln("}")
+		sw.Doln("}")
+	} else if ft.Elem != nil {
+		sw.Dof(`if s.m.$.Name$ != nil {`, m)
+		sw.Dof(`for _, item := range s.m.$.Name$ {`, m)
+		if ft.Elem.Kind == "Builtin" {
+			sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.JSONQuery("%s").HasKey(item))`, gname), m)
+		} else {
+			sw.Dof(`for k, v := range dao.FieldPatch(item) {`, m)
+			sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.JSONQuery("%s").Equals(v, strings.Split(k, ".")...))`, gname), m)
+			sw.Doln("}")
+		}
+		sw.Doln("}")
+		sw.Doln("}")
+	} else {
+		switch ft.Name.Name {
+		case "int", "int8", "int16", "int32", "int64",
+			"uint", "uint8", "uint16", "uint32", "uint64",
+			"float", "double":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, m)
+				sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.Cond().Build("%s", *s.m.$.Name$))`, gname), m)
+				sw.Doln("}")
+			} else {
+				sw.Dof(`if s.m.$.Name$ != 0 {`, m)
+				sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.Cond().Build("%s", s.m.$.Name$))`, gname), m)
+				sw.Doln("}")
+			}
+		case "string":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, m)
+				sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(*s.m.$.Name$)).Build("%s", *s.m.$.Name$))`, gname), m)
+				sw.Doln("}")
+			} else {
+				sw.Dof(`if s.m.$.Name$ != "" {`, m)
+				sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(s.m.$.Name$)).Build("%s", s.m.$.Name$))`, gname), m)
+				sw.Doln("}")
+			}
+		case "bool":
+			if ft.Underlying != nil {
+				sw.Dof(`if s.m.$.Name$ != nil {`, m)
+				sw.Dof(fmt.Sprintf(`exprs = append(exprs, dao.Cond().Build("%s", *s.m.$.Name$))`, gname), m)
+				sw.Doln("}")
+			}
+		}
+	}
 }
 
 type gormField struct {
