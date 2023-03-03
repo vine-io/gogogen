@@ -16,6 +16,7 @@ package goproto_gen
 
 import (
 	"fmt"
+	"path"
 	"reflect"
 	"strings"
 
@@ -34,6 +35,9 @@ func (n localNamer) Name(t *types.Type) string {
 	}
 	if len(n.localPackage.Package) != 0 && n.localPackage.Package == t.Name.Package {
 		return t.Name.Name
+	}
+	if len(t.Name.Package) != 0 && len(n.localPackage.Package) != 0 && n.localPackage.Package != t.Name.Package {
+		return path.Base(t.Name.Package) + "." + t.Name.Name
 	}
 	return t.Name.String()
 }
@@ -137,6 +141,7 @@ func assignGoTypeToProtoPackage(p *protobufPackage, t *types.Type, local, global
 		if tag == "-" {
 			continue
 		}
+
 		if err := protobufTagToField(tag, field, m, t, p.ProtoTypeName()); err == nil && field.Type != nil {
 			assignGoTypeToProtoPackage(p, field.Type, local, global, optional)
 			continue

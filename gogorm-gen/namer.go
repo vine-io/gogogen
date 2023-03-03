@@ -101,8 +101,8 @@ type typeNameSet map[types.Name]*gormPackage
 
 // assignGoTypeToGormPackage looks for Go types that are referenced by a type in a package.
 func assignGoTypeToGormPackage(p *gormPackage, t *types.Type, local, global typeNameSet, optional map[types.Name]struct{}) {
-	newT, isProto := isFundamentalGormType(t)
-	if isProto {
+	newT, isGorm := isFundamentalGormType(t)
+	if isGorm {
 		t = newT
 	}
 	if otherP, ok := global[t.Name]; ok {
@@ -122,7 +122,7 @@ func assignGoTypeToGormPackage(p *gormPackage, t *types.Type, local, global type
 		return
 	}
 	// don't recurse into existing gorm types
-	if isProto {
+	if isGorm {
 		p.Imports.AddType(t)
 		return
 	}

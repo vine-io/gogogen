@@ -627,7 +627,7 @@ func tcNameToName(in string) types.Name {
 		strings.HasPrefix(in, "chan ") ||
 		strings.HasPrefix(in, "func(") ||
 		strings.HasPrefix(in, "func (") ||
-		strings.HasPrefix(in, "*") ||
+		(strings.HasPrefix(in, "*") && !strings.Contains(in, ".")) ||
 		strings.HasPrefix(in, "map[") ||
 		strings.HasPrefix(in, "[") {
 		return types.Name{Name: in}
@@ -641,6 +641,10 @@ func tcNameToName(in string) types.Name {
 		// The final "." is the name of the type--previous ones must
 		// have been in the package path.
 		name.Package, name.Name = strings.Join(nameParts[:n-1], "."), nameParts[n-1]
+		if strings.HasPrefix(in, "*") {
+			name.Package = name.Package[1:]
+			name.Name = "*" + name.Name
+		}
 	}
 	return name
 }
@@ -670,6 +674,9 @@ func (b *Builder) walkType(u types.Universe, useName *types.Name, in tc.Type) *t
 
 	switch t := in.(type) {
 	case *tc.Struct:
+		if strings.Contains(name.Name, "Resource") {
+			log.Info("")
+		}
 		out := u.Type(name)
 		if out.Kind != types.Unknown {
 			return out
@@ -678,14 +685,20 @@ func (b *Builder) walkType(u types.Universe, useName *types.Name, in tc.Type) *t
 		for i := 0; i < t.NumFields(); i++ {
 			f := t.Field(i)
 			tt := f.Type()
-			if f.Type().Underlying() != nil {
-				tt = f.Type().Underlying()
+
+			var tn *types.Name
+			switch tt.(type) {
+			case *tc.Named:
+			default:
+				if f.Type().Underlying() != nil {
+					tt = f.Type().Underlying()
+				}
 			}
 			m := types.Member{
 				Name:         f.Name(),
 				Embedded:     f.Anonymous(),
 				Tags:         t.Tag(i),
-				Type:         b.walkType(u, nil, tt),
+				Type:         b.walkType(u, tn, tt),
 				CommentLines: splitLines(b.priorCommentLines(f.Pos(), 1).Text()),
 			}
 			out.Members = append(out.Members, m)

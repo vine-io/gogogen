@@ -150,6 +150,10 @@ func (g *genGormIDL) GenerateType(c *generator.Context, t *types.Type, w io.Writ
 		t: t,
 	}
 
+	if !extractBoolTagOrDie(tagEnable, t.CommentLines) {
+		return nil
+	}
+
 	var err error
 	switch t.Kind {
 	case types.Alias:
@@ -218,14 +222,19 @@ func (p gormLocator) GormTypeFor(t *types.Type) (*types.Type, error) {
 	}
 	// it's a message
 	if t.Kind == types.Struct || isOptionalAlias(t) {
-		t := &types.Type{
+		tt := &types.Type{
 			Name: p.namer.GoNameToGormName(t.Name),
 			Kind: types.Gorm,
 
 			CommentLines: t.CommentLines,
 		}
+
+		if isOptionalAlias(t) {
+			tt.Underlying = t.Underlying
+		}
+
 		p.tracker.AddType(t)
-		return t, nil
+		return tt, nil
 	}
 	return nil, errUnrecognizedType
 }
@@ -313,76 +322,18 @@ func (b bodyGen) doStruct(sw *generator.SnippetWriter) error {
 		}
 		genComment(out, field.CommentLines, "  ")
 		fmt.Fprintf(out, "  ")
-		if field.embedded {
-			sw.Do("$.Name$ string "+fmt.Sprintf("`%s`", field.toTagString()), field)
-		} else {
-			sw.Do("$.Name$ $.Type|local$ "+fmt.Sprintf("`%s`", field.toTagString()), field)
-		}
+		sw.Do("$.Name$ string "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		//if field.embedded {
+		//	sw.Do("$.Name$ string "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		//} else {
+		//sw.Do("$.Name$ $.Type|local$ "+fmt.Sprintf("`%s`", field.toTagString()), field)
+		//}
 		fmt.Fprintf(out, "\n")
 		if i != len(fields)-1 {
 			fmt.Fprintf(out, "\n")
 		}
 	}
 	sw.Doln("}")
-
-	if pkField == nil && !embedded {
-		return fmt.Errorf("type %v missing field for primaryKey", b.t)
-	}
-
-	for _, field := range fields {
-		if field.embedded {
-			continue
-		}
-		fname := field.Name
-		ft := field.Type.Name.Name
-		if field.Type.Key != nil && field.Type.Elem != nil {
-			kt, vt := field.Type.Key.Name.Name, field.Type.Elem.Name.Name
-			if field.Type.Elem.Underlying != nil {
-				vt = "*" + vt
-			}
-			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in map[%s]%s) *$.Name.Name$ {`, fname, kt, vt), b.t)
-			sw.Dof("m.$.Name$ = in", field)
-			sw.Doln("return m")
-			sw.Doln("}")
-			sw.Doln("")
-
-			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Put%s(k %s, v %s) *$.Name.Name$ {`, fname, kt, vt), b.t)
-			sw.Dof(`if m.$.Name$ == nil {`, field)
-			sw.Dof(fmt.Sprintf(`m.$.Name$ = make(map[%s]%s)`, kt, vt), field)
-			sw.Doln("}")
-			sw.Dof("m.$.Name$[k] = v", field)
-			sw.Doln("return m")
-			sw.Doln("}")
-			sw.Doln("")
-
-			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Remove%s(k %s) *$.Name.Name$ {`, fname, kt), b.t)
-			sw.Dof(`if m.$.Name$ == nil {`, field)
-			sw.Doln("return m")
-			sw.Doln("}")
-			sw.Dof("delete(m.$.Name$, k)", field)
-			sw.Doln("return m")
-			sw.Doln("}")
-		} else if field.Type.Elem != nil {
-			if field.Type.Elem.Kind == "Builtin" {
-				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []%s) *$.Name.Name$ {`, fname, ft), b.t)
-			} else {
-				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []*%s) *$.Name.Name$ {`, fname, ft), b.t)
-			}
-			sw.Dof("m.$.Name$ = in", field)
-			sw.Doln("return m")
-			sw.Doln("}")
-		} else {
-			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in %s) *$.Name.Name$ {`, fname, ft), b.t)
-			if field.Type.Underlying != nil {
-				sw.Dof("m.$.Name$ = &in", field)
-			} else {
-				sw.Dof("m.$.Name$ = in", field)
-			}
-			sw.Doln("return m")
-			sw.Doln("}")
-		}
-		sw.Doln("")
-	}
 
 	// generate functions for implements dao.JSONValue
 	sw.Dof(`// Value return json value, implement driver.Valuer interface
@@ -407,6 +358,83 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
+	interfaceExt := false
+	markers := types.ExtractCommentTags("+"+tagEnable+":", b.t.CommentLines)
+	infv, ok := markers[tagExternal]
+	if !ok {
+		return nil
+	}
+
+	if len(infv) > 0 && infv[0] == "false" {
+		return nil
+	}
+
+	if len(infv) > 0 && infv[0] == "interfaces" {
+		interfaceExt = true
+	}
+
+	if pkField == nil && !embedded {
+		return fmt.Errorf("type %v missing field for primaryKey", b.t)
+	}
+
+	for _, field := range fields {
+		if field.embedded {
+			continue
+		}
+		fname := field.Name
+		ft := field.Type
+		if ft.Underlying != nil {
+			ft = ft.Underlying
+		}
+		if ft.Key != nil && ft.Elem != nil { // map
+			kt, vt := ft.Key.Name.Name, ft.Elem.Name.Name
+			if ft.Elem.Underlying != nil {
+				vt = "*" + vt
+			}
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in map[%s]%s) *$.Name.Name$ {`, fname, kt, vt), b.t)
+			sw.Dof("m.$.Name$ = in", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Doln("")
+
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Put%s(k %s, v %s) *$.Name.Name$ {`, fname, kt, vt), b.t)
+			sw.Dof(`if m.$.Name$ == nil {`, field)
+			sw.Dof(fmt.Sprintf(`m.$.Name$ = make(map[%s]%s)`, kt, vt), field)
+			sw.Doln("}")
+			sw.Dof("m.$.Name$[k] = v", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Doln("")
+
+			sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Remove%s(k %s) *$.Name.Name$ {`, fname, kt), b.t)
+			sw.Dof(`if m.$.Name$ == nil {`, field)
+			sw.Doln("return m")
+			sw.Doln("}")
+			sw.Dof("delete(m.$.Name$, k)", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+		} else if ft.Elem != nil { // slice
+			if ft.Elem.Kind == "Builtin" {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []%s) *$.Name.Name$ {`, fname, ft.Elem.Name.Name), b.t)
+			} else {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in []*%s) *$.Name.Name$ {`, fname, ft.Elem.Name.Name), b.t)
+			}
+			sw.Dof("m.$.Name$ = in", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+		} else {
+			if ft.Kind == types.Gorm {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in %s) *$.Name.Name$ {`, fname, ft.Name.Name), b.t)
+			} else {
+				sw.Dof(fmt.Sprintf(`func (m *$.Name.Name$) Set%s(in *%s) *$.Name.Name$ {`, fname, ft.Name.Name), b.t)
+			}
+			sw.Dof("m.$.Name$ = in", field)
+			sw.Doln("return m")
+			sw.Doln("}")
+		}
+		sw.Doln("")
+	}
+
 	/*
 		func (m TestStorage) PrimaryKey() (string, interface{}, bool) {
 			return "uid", m.Uid, m.Uid == ""
@@ -427,18 +455,6 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 		}
 		sw.Doln("}")
 		sw.Doln("")
-	}
-
-	interfaceExt := false
-	markers := types.ExtractCommentTags("+"+tagEnable+":", b.t.CommentLines)
-	if v, ok := markers[tagExternal]; ok {
-		if len(v) > 0 && v[0] == "false" {
-			return nil
-		}
-
-		if len(v) > 0 && v[0] == "interfaces" {
-			interfaceExt = true
-		}
 	}
 
 	// generate storage struct
@@ -657,22 +673,26 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 		}
 	*/
 	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses() []clause.Expression {`, b.t)
-	sw.Doln("m := s.m")
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
 	for _, field := range fields {
 		if field.embedded {
 			continue
 		}
-		if field.Type.Key != nil && field.Type.Elem != nil {
-			sw.Dof(`if m.$.Name$ != nil {`, field)
-			sw.Dof(`for k, v := range m.$.Name$ {`, field)
+
+		ft := field.Type
+		if ft.Underlying != nil {
+			ft = ft.Underlying
+		}
+		if ft.Key != nil && ft.Elem != nil {
+			sw.Dof(`if s.m.$.Name$ != nil {`, field)
+			sw.Dof(`for k, v := range s.m.$.Name$ {`, field)
 			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, k))`, field)
 			sw.Doln("}")
 			sw.Doln("}")
-		} else if field.Type.Elem != nil {
-			sw.Dof(`if m.$.Name$ != nil {`, field)
-			sw.Dof(`for _, item := range m.$.Name$ {`, field)
-			if field.Type.Elem.Kind == "Builtin" {
+		} else if ft.Elem != nil {
+			sw.Dof(`if s.m.$.Name$ != nil {`, field)
+			sw.Dof(`for _, item := range s.m.$.Name$ {`, field)
+			if ft.Elem.Kind == "Builtin" {
 				sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").HasKey(item))`, field)
 			} else {
 				sw.Dof(`for k, v := range dao.FieldPatch(item) {`, field)
@@ -682,33 +702,33 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 			sw.Doln("}")
 			sw.Doln("}")
 		} else {
-			switch field.Type.Name.Name {
+			switch ft.Name.Name {
 			case "int", "int8", "int16", "int32", "int64",
 				"uint", "uint8", "uint16", "uint32", "uint64",
 				"float", "double":
-				if field.Type.Underlying != nil {
-					sw.Dof(`if m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *m.$.Name$))`, field)
+				if ft.Underlying != nil {
+					sw.Dof(`if s.m.$.Name$ != nil {`, field)
+					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
 					sw.Doln("}")
 				} else {
-					sw.Dof(`if m.$.Name$ != 0 {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", m.$.Name$))`, field)
+					sw.Dof(`if s.m.$.Name$ != 0 {`, field)
+					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", s.m.$.Name$))`, field)
 					sw.Doln("}")
 				}
 			case "string":
-				if field.Type.Underlying != nil {
-					sw.Dof(`if m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(*m.$.Name$)).Build("$.GormName$", *m.$.Name$))`, field)
+				if ft.Underlying != nil {
+					sw.Dof(`if s.m.$.Name$ != nil {`, field)
+					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(*s.m.$.Name$)).Build("$.GormName$", *s.m.$.Name$))`, field)
 					sw.Doln("}")
 				} else {
-					sw.Dof(`if m.$.Name$ != "" {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(m.$.Name$)).Build("$.GormName$", m.$.Name$))`, field)
+					sw.Dof(`if s.m.$.Name$ != "" {`, field)
+					sw.Dof(`exprs = append(exprs, dao.Cond().Op(dao.ParseOp(s.m.$.Name$)).Build("$.GormName$", s.m.$.Name$))`, field)
 					sw.Doln("}")
 				}
 			case "bool":
-				if field.Type.Underlying != nil {
-					sw.Dof(`if m.$.Name$ != nil {`, field)
-					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *m.$.Name$))`, field)
+				if ft.Underlying != nil {
+					sw.Dof(`if s.m.$.Name$ != nil {`, field)
+					sw.Dof(`exprs = append(exprs, dao.Cond().Build("$.GormName$", *s.m.$.Name$))`, field)
 					sw.Doln("}")
 				}
 			}

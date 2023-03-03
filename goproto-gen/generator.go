@@ -49,12 +49,12 @@ func (g *genProtoIDL) PackageVars(c *generator.Context) []string {
 		}
 	}
 	return []string{
-		"option (gogoproto.marshaler_all) = false;",
+		"option (gogoproto.marshaler_all) = true;",
 		"option (gogoproto.stable_marshaler_all) = true;",
 		"option (gogoproto.sizer_all) = true;",
 		"option (gogoproto.goproto_stringer_all) = true;",
 		"option (gogoproto.stringer_all) = true;",
-		"option (gogoproto.unmarshaler_all) = false;",
+		"option (gogoproto.unmarshaler_all) = true;",
 		"option (gogoproto.goproto_unrecognized_all) = false;",
 		"option (gogoproto.goproto_enum_prefix_all) = false;",
 		"option (gogoproto.goproto_getters_all) = false;",
@@ -778,11 +778,18 @@ func assembleProtoFile(w io.Writer, f *generator.File) {
 	if len(f.Imports) > 0 {
 		imports := []string{}
 		for i := range f.Imports {
+			if i == f.PackagePath {
+				continue
+			}
 			imports = append(imports, i)
 		}
 		sort.Strings(imports)
 		for _, s := range imports {
-			fmt.Fprintf(w, "import %q;\n", s)
+			if strings.HasSuffix(s, "proto") {
+				fmt.Fprintf(w, "import %q;\n", s)
+			} else {
+				fmt.Fprintf(w, "import %q;\n", s+"/"+"generated.proto")
+			}
 		}
 		fmt.Fprint(w, "\n")
 	}
