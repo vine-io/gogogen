@@ -447,6 +447,9 @@ func updateStructTags(decl ast.Decl, structTags map[string]map[string]string, to
 				}
 				// append new tags
 				if v := reflect.StructTag(value).Get(name); len(v) > 0 {
+					if idx := strings.Index(v, "["); idx > 0 {
+						v = v[:idx]
+					}
 					tags = append(tags, customreflect.StructTag{Name: name, Value: v})
 				}
 			}

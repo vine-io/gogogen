@@ -89,7 +89,7 @@ func (r *pluralNamer) Name(t *types.Type) string {
 	default:
 		plural = sPlural(singular)
 	}
-	return r.finalize(singular)
+	return r.finalize(plural)
 }
 
 func iesPlural(singular string) string {
