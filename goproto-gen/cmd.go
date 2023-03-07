@@ -43,6 +43,7 @@ const (
 
 type Generator struct {
 	Common               args.GeneratorArgs
+	GeneratedName        string
 	MetadataPackages     string
 	Packages             string
 	OutputBase           string
@@ -69,6 +70,7 @@ func New() *Generator {
 	}
 	return &Generator{
 		Common:             common,
+		GeneratedName:      "generated",
 		OutputBase:         sourceTree,
 		VendorOutputBase:   filepath.Join(cwd, "vendor"),
 		ProtoImport:        []string{defaultProtoImport},
@@ -81,6 +83,7 @@ func New() *Generator {
 func (g *Generator) BindFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&g.Common.GoHeaderFilePath, "go-header-file", "H", g.Common.GoHeaderFilePath,
 		"File containing boilerplate header text. The string YEAR will be replaced with the current 4-digit year.")
+	fs.StringVar(&g.GeneratedName, "generated-name", g.GeneratedName, "The Name of the generated file")
 	fs.BoolVar(&g.Common.VerifyOnly, "verify-only", g.Common.VerifyOnly,
 		"If true, only verify existing output, do not write anything.")
 	fs.StringVarP(&g.Packages, "packages", "p", g.Packages,
@@ -166,7 +169,7 @@ func Run(g *Generator) {
 			d = parts[0]
 			name = parts[1]
 		}
-		p := newProtobufPackage(d, name, generateAllTypes, omitTypes)
+		p := newProtobufPackage(g.GeneratedName, d, name, generateAllTypes, omitTypes)
 		header := append([]byte{}, boilerplate...)
 		header = append(header, p.HeaderText...)
 		p.HeaderText = header
