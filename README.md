@@ -1,8 +1,25 @@
 # 安装
 
 ```shell
-go install github.com/vine-io/gogogen/cmd/deepcopy-gen@latest
-go install github.com/vine-io/gogogen/cmd/goproto-gen@latest
-go install github.com/vine-io/gogogen/cmd/gogorm-gen@latest
-go install github.com/vine-io/gogogen/cmd/set-gen@latest
+bash -c "$(curl -fsSL https://raw.github.com/vine-io/gogogen/master/install.sh)"
+```
+
+# deepcopy-gen
+```shell
+deepcopy-gen -i github.com/vine-io/apimachinery/testdata/a
+```
+
+# goproto-gen
+```shell
+goproto-gen --metadata-packages github.com/vine-io/apimachinery/apis/meta/v1  -p github.com/vine-io/apimachinery/testdata/a
+```
+
+# gogorm-gen
+```shell
+gogorm-gen  -p github.com/vine-io/apimachinery/testdata/a
+```
+
+# set-gen
+```shell
+ set-gen -i github.com/vine-io/gogogen/util/sets/types
 ```
