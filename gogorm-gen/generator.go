@@ -460,6 +460,7 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	// generate storage struct
 	sw.Dof(`type $.Name.Name$Storage struct {`, b.t)
 	sw.Doln("tx *gorm.DB")
+	sw.Doln("joins []string")
 	sw.Dof("m *$.Name.Name$", b.t)
 	sw.Doln("exprs []clause.Expression")
 	sw.Doln("}")
@@ -468,7 +469,7 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	// generate New function for storage
 	sw.Dof(`func New$.Name.Name$Storage(db *gorm.DB, m *$.Name.Name$) *$.Name.Name$Storage {`, b.t)
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
-	sw.Dof(`return &$.Name.Name$Storage{tx: db, m: m, exprs: exprs}`, b.t)
+	sw.Dof(`return &$.Name.Name$Storage{tx: db, joins: []string{}, m: m, exprs: exprs}`, b.t)
 	sw.Doln("}")
 	sw.Doln("")
 
@@ -580,7 +581,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("session := dao.GetSession(ctx)")
 	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
-	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
+	sw.Doln("clauses := append(s.extractClauses(tx), s.exprs...)")
+	sw.Doln(`for _, item := range s.joins { tx = tx.Joins(item) }`)
 	sw.Doln(`err = tx.Clauses(clauses...).Count(&total).Error`)
 	sw.Doln("return")
 	sw.Doln("}")
@@ -614,7 +616,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("session := dao.GetSession(ctx)")
 	sw.Dof("tx := s.tx.Session(session).Table(s.m.TableName()).WithContext(ctx)", b.t)
 	sw.Doln("")
-	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
+	sw.Doln("clauses := append(s.extractClauses(tx), s.exprs...)")
+	sw.Doln("for _, item := range s.joins { tx = tx.Joins(item) }")
 	sw.Doln(`if err := tx.Clauses(clauses...).Find(&dest).Error; err != nil {`)
 	sw.Doln("return nil, err")
 	sw.Doln("}")
@@ -640,7 +643,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Dof(`func (s *$.Name.Name$Storage) XXFindOne(ctx context.Context) (m *$.Name.Name$, err error) {`, b.t)
 	sw.Doln("session := dao.GetSession(ctx)")
 	sw.Dof("tx := s.tx.Session(session).Table(m.TableName()).WithContext(ctx)", b.t)
-	sw.Doln("clauses := append(s.extractClauses(), s.exprs...)")
+	sw.Doln("clauses := append(s.extractClauses(tx), s.exprs...)")
+	sw.Doln("for _, item := range s.joins { tx = tx.Joins(item) }")
 	sw.Doln(`if err = tx.Clauses(clauses...).First(&m).Error; err != nil {`)
 	sw.Doln("return nil, err")
 	sw.Doln("}")
@@ -672,7 +676,7 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 			return exprs
 		}
 	*/
-	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses() []clause.Expression {`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) extractClauses(tx *gorm.DB) []clause.Expression {`, b.t)
 	sw.Doln(`exprs := make([]clause.Expression, 0)`)
 	for _, field := range fields {
 		scanField(sw, field)
@@ -819,10 +823,14 @@ func scanField(sw *generator.SnippetWriter, field gormField) {
 		sw.Dof(`if s.m.$.Name$ != nil {`, field)
 		sw.Dof(`for _, item := range s.m.$.Name$ {`, field)
 		if ft.Elem.Kind == "Builtin" {
-			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").HasKey(item))`, field)
+			sw.Dof(`expr, query := dao.JSONQuery("$.GormName$").Contains(tx, item)`, field)
+			sw.Doln("s.joins = append(s.joins, query)")
+			sw.Doln(`exprs = append(exprs, expr)`)
 		} else {
 			sw.Dof(`for k, v := range dao.FieldPatch(item) {`, field)
-			sw.Dof(`exprs = append(exprs, dao.JSONQuery("$.GormName$").Equals(v, strings.Split(k, ".")...))`, field)
+			sw.Dof(`expr, query := dao.JSONQuery("$.GormName$").Contains(tx, v, strings.Split(k, ".")...)`, field)
+			sw.Doln("s.joins = append(s.joins, query)")
+			sw.Doln(`exprs = append(exprs, expr)`)
 			sw.Doln("}")
 		}
 		sw.Doln("}")
