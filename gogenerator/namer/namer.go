@@ -308,6 +308,10 @@ func (r *rawNamer) Name(t *types.Type) string {
 	if name, ok := r.Names[t]; ok {
 		return name
 	}
+	switch t.Kind {
+	case types.Alias:
+		return r.Name(t.Underlying)
+	}
 	if t.Name.Package != "" {
 		var name string
 		if r.tracker != nil {
