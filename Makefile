@@ -1,7 +1,6 @@
 NAME=$(shell echo "gogogen")
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 GIT_TAG=$(shell git describe --abbrev=0 --tags --always --match "v*")
-GIT_VERSION=github.com/vine-io/vine/cmd/vine/version
 CGO_ENABLED=0
 BUILD_DATE=$(shell date +%s)
 TOOLS=$(shell echo "deepcopy-gen gogorm-gen goproto-gen set-gen" )
@@ -14,26 +13,9 @@ vendor:
 lint:
 	golint -set_exit_status ./..
 
-release:
-ifeq "$(TAG)" ""
-	@echo "missing tag"
-	exit 1
-endif
-	git tag $(TAG)
-	make build-tag
-	git add .
-	git commit -m "$(TAG)"
-	git tag -d $(TAG)
-	git tag $(TAG)
-
 changelog:
 	mkdir -p _output
 	changelog --last --output _output/CHANGELOG.md
-
-build-tag:
-	sed -i "" "s/GitCommit = ".*"/GitCommit = \"$(GIT_COMMIT)\"/g" cmd/vine/version/version.go
-	sed -i "" "s/GitTag    = ".*"/GitTag    = \"$(GIT_TAG)\"/g" cmd/vine/version/version.go
-	sed -i "" "s/BuildDate = ".*"/BuildDate = \"$(BUILD_DATE)\"/g" cmd/vine/version/version.go
 
 tar-windows:
 	mkdir -p _output/windows-amd64
@@ -76,4 +58,4 @@ clean:
 	rm -rf ./vine
 	rm -fr ./_output
 
-.PHONY: build build-tag release tar-windows tar-linux-arm64 tar-darwin-amd64 tar-darwin-arm64 tar-darwin-amd64 tar clean
+.PHONY: build tar-windows tar-linux-arm64 tar-darwin-amd64 tar-darwin-arm64 tar-darwin-amd64 tar clean
