@@ -50,7 +50,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./_output/CHANGELOG.md
             ./_output/gogogen-darwin-arm64-${{ github.ref_name }}.tar.gz
             ./_output/gogogen-darwin-amd64-${{ github.ref_name }}.tar.gz
             ./_output/gogogen-linux-amd64-${{ github.ref_name }}.tar.gz
