@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-name=`gogogen`
+name="gogogen"
 archi=`arch`
 if [ "$archi" == "x86_64" ];then
   archi="amd64"
