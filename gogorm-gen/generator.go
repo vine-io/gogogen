@@ -478,8 +478,8 @@ func (m *$.Name.Name$) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	sw.Doln("}")
 	sw.Doln("")
 
-	sw.Dof(`func (s *$.Name.Name$Storage) AutoMigrate() error {`, b.t)
-	sw.Dof(`return s.tx.AutoMigrate(&$.Name.Name${})`, b.t)
+	sw.Dof(`func (s *$.Name.Name$Storage) AutoMigrate(tx *gorm.DB) error {`, b.t)
+	sw.Dof(`return tx.AutoMigrate(&$.Name.Name${})`, b.t)
 	sw.Doln("}")
 	sw.Doln("")
 
