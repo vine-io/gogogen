@@ -607,6 +607,9 @@ func protobufTagToField(tag string, field *protoField, m types.Member, t *types.
 		if strings.Contains(extra, "[") || strings.Contains(extra, "]") {
 			continue
 		}
+		if extra == "proto3" {
+			continue
+		}
 		parts := strings.SplitN(extra, "=", 2)
 		if len(parts) != 2 {
 			return fmt.Errorf("member %q of %q malformed 'protobuf' tag, tag %d should be key=value, got %q\n", m.Name, t.Name, i+4, extra)
