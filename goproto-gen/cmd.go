@@ -63,7 +63,7 @@ func New() *Generator {
 		OutputBase:       sourceTree,
 		GoHeaderFilePath: filepath.Join(sourceTree, utilbuild.BoilerplatePath()),
 	}
-	defaultProtoImport := filepath.Join(sourceTree, "github.com", "gogo", "protobuf", "gogoproto")
+	//defaultProtoImport := filepath.Join(sourceTree, "github.com", "gogo", "protobuf", "gogoproto")
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Cannot get current directory.")
@@ -73,7 +73,7 @@ func New() *Generator {
 		GeneratedName:      "generated",
 		OutputBase:         sourceTree,
 		VendorOutputBase:   filepath.Join(cwd, "vendor"),
-		ProtoImport:        []string{defaultProtoImport},
+		ProtoImport:        []string{},
 		MetadataPackages:   strings.Join([]string{}, ","),
 		Packages:           "",
 		DropEmbeddedFields: "github.com/vine-io/gogogen/runtime/meta.Meta",
@@ -260,6 +260,9 @@ func Run(g *Generator) {
 	}
 
 	searchArgs := []string{"-I", ".", "-I", g.OutputBase}
+	if stat, _ := os.Stat("vendor"); stat != nil {
+		searchArgs = append(searchArgs, "-I", "vendor")
+	}
 	if len(g.ProtoImport) != 0 {
 		for _, s := range g.ProtoImport {
 			searchArgs = append(searchArgs, "-I", s)
