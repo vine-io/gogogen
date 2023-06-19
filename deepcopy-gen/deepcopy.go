@@ -817,7 +817,7 @@ func (g *genDeepCopy) doSlice(t *types.Type, sw *generator.SnippetWriter) {
 		sw.Do("for i := range *in {\n", nil)
 		if uet.Kind == types.Slice || uet.Kind == types.Map || uet.Kind == types.Pointer || deepCopyMethodOrDie(ut.Elem) != nil || deepCopyIntoMethodOrDie(ut.Elem) != nil {
 			sw.Do("if (*in)[i] != nil {\n", nil)
-			sw.Do("in, out := &(*out)[i], &(*out)[i]\n", nil)
+			sw.Do("in, out := &(*in)[i], &(*out)[i]\n", nil)
 			g.generateFor(ut.Elem, sw)
 			sw.Do("}\n", nil)
 		} else if uet.Kind == types.Interface {
